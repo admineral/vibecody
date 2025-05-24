@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DocAI - Component Visualization Tool
 
-## Getting Started
+Visualize and explore the component architecture of any GitHub repository.
 
-First, run the development server:
+## Features
 
+- 🔍 Analyze React/Next.js repositories from GitHub
+- 📊 Interactive component dependency graph
+- 📁 File explorer with component indicators
+- 🔄 Real-time analysis with progressive updates
+- 📝 Component details and code preview
+
+## Setup
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/docai.git
+cd docai
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Create a `.env.local` file in the root directory and add your GitHub token:
+```env
+GITHUB_TOKEN=your_github_personal_access_token_here
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To get a GitHub Personal Access Token:
+- Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+- Click "Generate new token" (classic)
+- Select scopes: `repo` (for private repos) or `public_repo` (for public repos only)
+- Copy the token and add it to your `.env.local` file
 
-## Learn More
+4. Run the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Usage
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Enter a GitHub repository URL in the input field (e.g., `https://github.com/admineral/OpenAI-Assistant-API-Chat`)
+2. Click "Analyze" or press Enter
+3. Watch as components are discovered and visualized in real-time
+4. Click on components to see their details, dependencies, and code
 
-## Deploy on Vercel
+## Technologies Used
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Next.js 15
+- React Flow for graph visualization
+- TypeScript
+- Tailwind CSS
+- GitHub API for repository analysis
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT

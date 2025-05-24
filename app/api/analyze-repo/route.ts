@@ -258,28 +258,41 @@ function analyzeFileContent(filePath: string, content: string): ComponentMetadat
     uses,
     props,
     file: filePath,
-    exports
+    exports,
+    content // Store the file content for later use
   };
 }
 
 function isNextJsComponentFile(content: string, filePath: string): boolean {
-  // Skip API routes
-  if (filePath.includes('/api/') && !filePath.match(/\.(tsx|jsx)$/)) {
-    return false;
+  // Always include API routes as utilities (they're important for understanding the app)
+  if (filePath.includes('/api/') && filePath.match(/\.(ts|js)$/)) {
+    return true; // Include API routes as utilities
   }
   
-  // Skip Next.js config files, but include them as utilities
-  if (filePath.match(/(next\.config|tailwind\.config|postcss\.config)\./)) {
-    return true; // Include as utility
+  // Include Next.js config files as utilities
+  if (filePath.match(/(next\.config|tailwind\.config|postcss\.config|prettier\.config)\./)) {
+    return true;
+  }
+  
+  // Include TypeScript config and other important config files
+  if (filePath.match(/(tsconfig|package)\.json$/) || 
+      filePath.match(/\.(config|constants|utils|helpers)\.(tsx|jsx|ts|js)$/)) {
+    return true;
+  }
+  
+  // Include utility files and type definitions
+  if (filePath.match(/\/(utils|lib|helpers|config|constants|types|services|modules)\//)) {
+    return true;
+  }
+  
+  // Include important root files
+  if (filePath.match(/^(middleware|instrumentation)\.(ts|js)$/) ||
+      filePath.endsWith('.d.ts')) {
+    return true;
   }
   
   // Skip test files
   if (filePath.match(/\.(test|spec)\.(tsx|jsx|ts|js)$/)) {
-    return false;
-  }
-  
-  // Skip type definition files unless they export components
-  if (filePath.endsWith('.d.ts') && !/export.*Component|export.*Provider/.test(content)) {
     return false;
   }
   
@@ -297,13 +310,21 @@ function isNextJsComponentFile(content: string, filePath: string): boolean {
   const isHook = /export\s+(function\s+use[A-Z]|const\s+use[A-Z])/.test(content);
   
   // Check for utility/config files
-  const isUtility = !!filePath.match(/\/(utils|lib|helpers|config|constants)\//);
+  const isUtility = !!filePath.match(/\/(utils|lib|helpers|config|constants|services|modules|types)\//);
   
-  return (hasReactImport || hasJSXReturn || isNextPage || isNextLayout || isHook || isUtility) && 
-         (hasExportDefault || hasComponentPattern || isHook || isUtility);
+  // Check for export patterns (any exported function, class, or const)
+  const hasExports = /export\s+(function|class|const|interface|type)/.test(content);
+  
+  return (hasReactImport || hasJSXReturn || isNextPage || isNextLayout || isHook || isUtility || hasExports) && 
+         (hasExportDefault || hasComponentPattern || isHook || isUtility || hasExports);
 }
 
 function determineComponentType(filePath: string, content: string): ComponentType {
+  // API Routes (Next.js)
+  if (filePath.includes('/api/') && filePath.match(/\.(ts|js)$/)) {
+    return ComponentType.UTILITY;
+  }
+  
   // Next.js App Router patterns (priority order)
   
   // App Router pages (app/*/page.tsx)
@@ -362,13 +383,17 @@ function determineComponentType(filePath: string, content: string): ComponentTyp
     return ComponentType.CONTEXT;
   }
   
-  // Utilities, libs, helpers, configs
+  // Utilities, libs, helpers, configs, services, modules
   if (filePath.includes('/utils/') || 
       filePath.includes('/lib/') || 
       filePath.includes('/helpers/') ||
       filePath.includes('/config/') ||
       filePath.includes('/constants/') ||
-      filePath.match(/\.(config|constants|utils|helpers)\.(tsx|jsx|ts|js)$/)) {
+      filePath.includes('/services/') ||
+      filePath.includes('/modules/') ||
+      filePath.includes('/types/') ||
+      filePath.match(/\.(config|constants|utils|helpers|types)\.(tsx|jsx|ts|js)$/) ||
+      filePath.match(/(tsconfig|package)\.json$/)) {
     return ComponentType.UTILITY;
   }
   
@@ -377,6 +402,26 @@ function determineComponentType(filePath: string, content: string): ComponentTyp
 }
 
 function extractComponentName(content: string, fileName: string): string {
+  // For utility/service files, try to extract a more meaningful name
+  if (fileName.toLowerCase().includes('api') || fileName.toLowerCase().includes('service')) {
+    // Look for class names or main object exports
+    const classMatch = content.match(/(?:export\s+)?class\s+([A-Z][a-zA-Z0-9]*)/);
+    if (classMatch) {
+      return classMatch[1];
+    }
+    
+    // Look for main service object
+    const serviceMatch = content.match(/(?:export\s+)?const\s+([A-Za-z][a-zA-Z0-9]*(?:Service|API|Client))\s*=/);
+    if (serviceMatch) {
+      return serviceMatch[1];
+    }
+    
+    // For API files, use "ApiService" or similar
+    if (fileName.toLowerCase() === 'api') {
+      return 'ApiService';
+    }
+  }
+  
   // Try to extract from export default
   const exportMatch = content.match(/export\s+default\s+(?:function\s+)?([A-Z][a-zA-Z0-9]*)/);
   if (exportMatch) {
@@ -395,7 +440,12 @@ function extractComponentName(content: string, fileName: string): string {
     return constMatch[1];
   }
   
-  // Fallback to filename
+  // For utility files, create a meaningful name from filename
+  if (fileName.match(/^(utils?|helpers?|lib|config|constants?)$/i)) {
+    return fileName.charAt(0).toUpperCase() + fileName.slice(1).toLowerCase() + 'Utils';
+  }
+  
+  // Fallback to filename with proper capitalization
   return fileName.charAt(0).toUpperCase() + fileName.slice(1);
 }
 
@@ -448,25 +498,53 @@ function extractDependencies(content: string): string[] {
     
     // Skip external libraries and focus on relative imports
     if (importPath.startsWith('./') || importPath.startsWith('../') || importPath.startsWith('@/')) {
-      // Extract component names from the import
+      // Extract component/function names from the import
       const componentMatch = match[0].match(/import\s+(?:{([^}]+)}|(\w+))/);
       if (componentMatch) {
-        const components = componentMatch[1] 
-          ? componentMatch[1].split(',').map(c => c.trim())
+        const imports = componentMatch[1] 
+          ? componentMatch[1].split(',').map(c => c.trim().replace(/\s+as\s+\w+/, '')) // Handle "as" aliases
           : [componentMatch[2]];
         
-        dependencies.push(...components.filter(c => c && /^[A-Z]/.test(c)));
+        // Add all imported items (components, functions, etc.)
+        dependencies.push(...imports.filter(c => c && /^[A-Za-z]/.test(c)));
+      }
+      
+      // Also try to infer the module name from the path for utility files
+      const pathParts = importPath.split('/');
+      const fileName = pathParts[pathParts.length - 1];
+      if (fileName && !fileName.startsWith('.')) {
+        // Convert file names to potential export names
+        const potentialExports = [
+          fileName.replace(/\.(ts|js|tsx|jsx)$/, ''), // Remove extension
+          fileName.charAt(0).toUpperCase() + fileName.slice(1).replace(/\.(ts|js|tsx|jsx)$/, ''), // Capitalize
+        ];
+        dependencies.push(...potentialExports.filter(name => name.length > 1));
       }
     }
   }
   
-  return dependencies;
+  // Also look for function calls in the code to detect usage
+  // This helps catch cases where functions are imported but the import isn't clearly parsed
+  const functionCallMatches = content.matchAll(/(?:await\s+)?(\w+)\s*\(/g);
+  for (const match of functionCallMatches) {
+    const functionName = match[1];
+    // Only include if it's not a common JS keyword and starts with lowercase (utility functions)
+    if (functionName && 
+        functionName.length > 2 &&
+        !/^(if|for|while|switch|return|const|let|var|function|import|export|console|JSON|Object|Array|String|Number|Boolean|Date|Math|Promise|Error)$/.test(functionName) &&
+        /^[a-z]/.test(functionName)) {
+      dependencies.push(functionName);
+    }
+  }
+  
+  // Remove duplicates and return
+  return [...new Set(dependencies)];
 }
 
 function extractExports(content: string): string[] {
   const exports: string[] = [];
   
-  // Extract named exports
+  // Extract named exports (ES6 style)
   const namedExportMatches = content.matchAll(/export\s+(?:function\s+(\w+)|const\s+(\w+)|{([^}]+)})/g);
   
   for (const match of namedExportMatches) {
@@ -478,32 +556,137 @@ function extractExports(content: string): string[] {
     }
   }
   
+  // Extract arrow function exports
+  const arrowFunctionMatches = content.matchAll(/export\s+const\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*=>/g);
+  for (const match of arrowFunctionMatches) {
+    exports.push(match[1]);
+  }
+  
+  // Extract CommonJS exports (for .js files)
+  const commonJSMatches = content.matchAll(/(?:module\.)?exports\.(\w+)\s*=|exports\[['"](\w+)['"]\]\s*=/g);
+  for (const match of commonJSMatches) {
+    const exportName = match[1] || match[2];
+    if (exportName) exports.push(exportName);
+  }
+  
+  // Extract functions that might be exported (look for function declarations)
+  const functionDeclarations = content.matchAll(/(?:^|\n)\s*(?:const\s+(\w+)\s*=\s*(?:async\s+)?(?:function|\([^)]*\)\s*=>)|function\s+(\w+)\s*\([^)]*\)\s*{)/gm);
+  for (const match of functionDeclarations) {
+    const functionName = match[1] || match[2];
+    if (functionName) {
+      // Check if this function appears to be exported later
+      if (content.includes(`exports.${functionName}`) || 
+          content.includes(`export { ${functionName}`) ||
+          content.includes(`export {${functionName}`) ||
+          content.includes(`module.exports.${functionName}`)) {
+        exports.push(functionName);
+      }
+    }
+  }
+  
   // Extract default export
   const defaultExportMatch = content.match(/export\s+default\s+(?:function\s+)?(\w+)/);
   if (defaultExportMatch) {
     exports.push(defaultExportMatch[1]);
   }
   
-  return exports;
+  // For module.exports = { ... } pattern
+  const moduleExportsMatch = content.match(/module\.exports\s*=\s*{([^}]+)}/);
+  if (moduleExportsMatch) {
+    const exportContent = moduleExportsMatch[1];
+    const exportItems = exportContent.split(',').map(item => {
+      const cleanItem = item.trim();
+      // Handle both "key: value" and shorthand "key" syntax
+      const keyMatch = cleanItem.match(/^(\w+)(?:\s*:|$)/);
+      return keyMatch ? keyMatch[1] : null;
+    }).filter((item): item is string => item !== null);
+    exports.push(...exportItems);
+  }
+  
+  // Remove duplicates
+  return [...new Set(exports)];
 }
 
 function buildComponentRelationships(components: ComponentMetadata[]): void {
+  // Create maps for faster lookups
+  const componentsByName = new Map<string, ComponentMetadata>();
+  const componentsByExports = new Map<string, ComponentMetadata>();
+  const componentsByFileName = new Map<string, ComponentMetadata>();
+  
+  // Build lookup maps
+  components.forEach(component => {
+    componentsByName.set(component.name, component);
+    
+    // Map by exports
+    if (component.exports) {
+      component.exports.forEach(exportName => {
+        componentsByExports.set(exportName, component);
+      });
+    }
+    
+    // Map by filename (without extension)
+    const fileName = component.file.split('/').pop()?.replace(/\.(tsx|jsx|ts|js)$/, '');
+    if (fileName) {
+      componentsByFileName.set(fileName, component);
+      // Also map capitalized version
+      componentsByFileName.set(fileName.charAt(0).toUpperCase() + fileName.slice(1), component);
+    }
+  });
+
   // Build usedBy relationships
   for (const component of components) {
     if (component.uses) {
-      for (const usedComponentName of component.uses) {
-        const usedComponent = components.find(c => c.name === usedComponentName);
-        if (usedComponent) {
-          if (!usedComponent.usedBy) {
-            usedComponent.usedBy = [];
+      for (const usedItem of component.uses) {
+        let targetComponent: ComponentMetadata | undefined;
+        
+        // Try to find the target component in different ways
+        // 1. Direct component name match
+        targetComponent = componentsByName.get(usedItem);
+        
+        // 2. Export name match (for utility functions)
+        if (!targetComponent) {
+          targetComponent = componentsByExports.get(usedItem);
+        }
+        
+        // 3. Filename match (for imported modules)
+        if (!targetComponent) {
+          targetComponent = componentsByFileName.get(usedItem);
+        }
+        
+        // 4. Try to match with lowercase version (for utility functions)
+        if (!targetComponent) {
+          targetComponent = componentsByFileName.get(usedItem.toLowerCase());
+        }
+        
+        // If we found a target component, create the relationship
+        if (targetComponent && targetComponent !== component) {
+          // Add to usedBy array
+          if (!targetComponent.usedBy) {
+            targetComponent.usedBy = [];
           }
-          if (!usedComponent.usedBy.includes(component.name)) {
-            usedComponent.usedBy.push(component.name);
+          if (!targetComponent.usedBy.includes(component.name)) {
+            targetComponent.usedBy.push(component.name);
+          }
+          
+          // Clean up the uses array to reference the actual component name
+          const usedIndex = component.uses.indexOf(usedItem);
+          if (usedIndex !== -1 && targetComponent.name !== usedItem) {
+            component.uses[usedIndex] = targetComponent.name;
           }
         }
       }
     }
   }
+  
+  // Remove duplicates and self-references
+  components.forEach(component => {
+    if (component.uses) {
+      component.uses = [...new Set(component.uses.filter(name => name !== component.name))];
+    }
+    if (component.usedBy) {
+      component.usedBy = [...new Set(component.usedBy.filter(name => name !== component.name))];
+    }
+  });
 }
 
 // Enhanced file prioritization for Next.js

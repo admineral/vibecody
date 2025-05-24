@@ -20,6 +20,7 @@ export interface ComponentMetadata {
   props?: PropMetadata[];
   file: string;     // Path to the component file
   exports?: string[];
+  content?: string; // File content (stored during analysis)
 }
 
 // Metadata for a component's props
@@ -52,7 +53,9 @@ export interface FileItem {
   name: string;
   path: string;
   type: 'file' | 'directory';
-  children?: FileItem[] | Record<string, FileItem>;
+  fileType?: 'file' | 'api' | 'config' | 'util' | 'type' | 'test';
+  isClickable?: boolean;
+  children?: FileItem[];
   metadata?: ComponentMetadata;
 }
 

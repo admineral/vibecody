@@ -7,6 +7,11 @@ import PropertiesPanel from './components/properties/PropertiesPanel';
 import { useComponentGraph } from './lib/hooks/useComponentGraph';
 import { useComponentData } from './lib/context/ComponentDataContext';
 import { ComponentMetadata } from './lib/types';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 import 'reactflow/dist/style.css';
 
 interface GitHubFile {
@@ -241,61 +246,71 @@ export default function Home() {
       )}
       
       {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* File Explorer */}
-        {isSidebarOpen && (
-          <div className="w-64 border-r border-gray-300 flex-shrink-0 bg-white">
-            <FileExplorer 
-              components={components}
-              allFiles={allFiles}
-              selectedComponent={selectedNode}
-              onSelectComponent={selectNode}
-            />
-          </div>
-        )}
-        
-        {/* Canvas */}
-        <div className="flex-1 overflow-hidden">
-          {hasComponents ? (
-            <Canvas 
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onNodeClick={(nodeId) => selectNode(nodeId || null)}
-              onResetLayout={resetLayout}
-            />
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8">
-              <svg className="w-24 h-24 text-gray-300 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Welcome to DocAI</h2>
-              <p className="text-gray-600 mb-6 max-w-md">
-                Visualize and explore the component architecture of any GitHub repository.
-              </p>
-              <div className="space-y-3">
-                <p className="text-sm text-gray-500">
-                  Enter a GitHub repository URL above and click &quot;Analyze&quot; to get started.
-                </p>
-                <p className="text-sm text-gray-500">
-                  Example: <code className="bg-gray-100 px-2 py-1 rounded text-xs">https://github.com/admineral/OpenAI-Assistant-API-Chat</code>
-                </p>
-              </div>
-            </div>
+      <div className="flex-1 overflow-hidden">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* File Explorer */}
+          {isSidebarOpen && (
+            <>
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
+                <FileExplorer 
+                  components={components}
+                  allFiles={allFiles}
+                  selectedComponent={selectedNode}
+                  onSelectComponent={selectNode}
+                />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+            </>
           )}
-        </div>
-        
-        {/* Properties panel */}
-        {isDetailsPanelOpen && (
-          <div className="w-80 border-l border-gray-300 flex-shrink-0 bg-white">
-            <PropertiesPanel 
-              component={selectedComponent} 
-              relatedComponents={components}
-              onSelectComponent={selectNode}
-            />
-          </div>
-        )}
+          
+          {/* Canvas */}
+          <ResizablePanel defaultSize={isSidebarOpen && isDetailsPanelOpen ? 60 : isSidebarOpen || isDetailsPanelOpen ? 80 : 100}>
+            {hasComponents ? (
+              <Canvas 
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onNodeClick={(nodeId) => selectNode(nodeId || null)}
+                onResetLayout={resetLayout}
+                selectedNodeId={selectedNode}
+              />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                <svg className="w-24 h-24 text-gray-300 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <h2 className="text-2xl font-semibold text-gray-900 mb-2">Welcome to DocAI</h2>
+                <p className="text-gray-600 mb-6 max-w-md">
+                  Visualize and explore the component architecture of any GitHub repository.
+                </p>
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-500">
+                    Enter a GitHub repository URL above and click &quot;Analyze&quot; to get started.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Example: <code className="bg-gray-100 px-2 py-1 rounded text-xs">https://github.com/admineral/OpenAI-Assistant-API-Chat</code>
+                  </p>
+                </div>
+              </div>
+            )}
+          </ResizablePanel>
+          
+          {/* Properties panel */}
+          {isDetailsPanelOpen && (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={40}>
+                <PropertiesPanel 
+                  component={selectedComponent} 
+                  relatedComponents={components}
+                  onSelectComponent={selectNode}
+                  repoUrl={repoUrl.trim() || 'https://github.com/admineral/OpenAI-Assistant-API-Chat'}
+                />
+              </ResizablePanel>
+            </>
+          )}
+        </ResizablePanelGroup>
       </div>
     </div>
   );

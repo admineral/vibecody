@@ -3,38 +3,6 @@
 import { useState, useCallback } from 'react';
 import { FileItem, ComponentType, ComponentMetadata } from '@/app/lib/types';
 
-// Icons for file types
-const FileIcon = ({ filename }: { filename: string }) => {
-  if (filename.endsWith('.tsx') || filename.endsWith('.jsx')) {
-    return (
-      <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 13.5V10m0 9.5a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    );
-  } else if (filename.endsWith('.ts') || filename.endsWith('.js')) {
-    return (
-      <svg className="w-4 h-4 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" strokeWidth="2" />
-        <path d="M15 9h2v7.5m-2-3h2M7 12v4.5h2.25m0-9H7V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  } else if (filename.endsWith('.css') || filename.endsWith('.scss')) {
-    return (
-      <svg className="w-4 h-4 text-purple-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" strokeWidth="2" />
-        <path d="M7 7h4.5m1.5 0h4m-10 5h3m2 0h5m-10 5h2m3 0h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    );
-  } else {
-    return (
-      <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M6 2h10l4 4v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        <path d="M10 9h4m-4 4h4m-4 4h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-};
-
 interface FileTreeItemProps {
   item: FileItem;
   depth: number;
@@ -43,82 +11,112 @@ interface FileTreeItemProps {
 }
 
 // Component for a single file or directory in the tree
-const FileTreeItem = ({ item, depth, selectedPath, onSelectFile }: FileTreeItemProps) => {
-  const [isOpen, setIsOpen] = useState(depth < 2);
-  const isDirectory = item.type === 'directory';
-  const hasMetadata = !!item.metadata;
+function FileTreeItem({ item, depth, selectedPath, onSelectFile }: FileTreeItemProps) {
+  const [isOpen, setIsOpen] = useState(depth < 2); // Auto-expand first 2 levels
+  const hasChildren = item.children && item.children.length > 0;
+  const isSelected = selectedPath === item.path;
   
-  const toggleOpen = useCallback(() => {
-    if (isDirectory) {
-      setIsOpen(!isOpen);
+  // Get file type icon
+  const getFileIcon = () => {
+    if (item.type === 'directory') {
+      return isOpen ? '📂' : '📁';
     }
-  }, [isDirectory, isOpen]);
-  
-  const handleClick = useCallback(() => {
-    if (!isDirectory && hasMetadata) {
-      onSelectFile(item);
-    } else {
-      toggleOpen();
-    }
-  }, [isDirectory, hasMetadata, item, onSelectFile, toggleOpen]);
-  
-  // Get the appropriate icon based on component type
-  const ComponentBadge = ({ type }: { type: ComponentType }) => {
-    const bgColorMap: Record<ComponentType, string> = {
-      [ComponentType.PAGE]: 'bg-blue-700',
-      [ComponentType.LAYOUT]: 'bg-violet-700',
-      [ComponentType.COMPONENT]: 'bg-emerald-700',
-      [ComponentType.HOOK]: 'bg-orange-700',
-      [ComponentType.UTILITY]: 'bg-gray-700',
-      [ComponentType.CONTEXT]: 'bg-pink-700',
-    };
     
-    return (
-      <span 
-        className={`w-2 h-2 rounded-full ${bgColorMap[type]} inline-block ml-1 border border-white`}
-        title={`${type.charAt(0).toUpperCase() + type.slice(1)}`}
-      />
-    );
+    if (item.metadata) {
+      // Component file - use component type icon
+      switch (item.metadata.type) {
+        case ComponentType.PAGE: return '📄';
+        case ComponentType.LAYOUT: return '🎨';
+        case ComponentType.COMPONENT: return '🧩';
+        case ComponentType.HOOK: return '🪝';
+        case ComponentType.CONTEXT: return '🔄';
+        case ComponentType.UTILITY: return '🔧';
+        default: return '📄';
+      }
+    }
+    
+    // Non-component file - use file type icon
+    switch (item.fileType) {
+      case 'api': return '🌐';
+      case 'config': return '⚙️';
+      case 'util': return '🔧';
+      case 'type': return '📝';
+      case 'test': return '🧪';
+      default: return '📄';
+    }
   };
   
+  // Get file type badge
+  const getFileTypeBadge = () => {
+    if (item.metadata) {
+      return (
+        <span className={`text-xs px-1.5 py-0.5 rounded text-white ml-2 ${
+          item.metadata.type === ComponentType.PAGE ? 'bg-blue-600' :
+          item.metadata.type === ComponentType.LAYOUT ? 'bg-violet-600' :
+          item.metadata.type === ComponentType.COMPONENT ? 'bg-emerald-600' :
+          item.metadata.type === ComponentType.HOOK ? 'bg-orange-600' :
+          item.metadata.type === ComponentType.CONTEXT ? 'bg-pink-600' :
+          'bg-gray-600'
+        }`}>
+          {item.metadata.type}
+        </span>
+      );
+    }
+    
+    if (item.fileType && item.fileType !== 'file') {
+      return (
+        <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500 text-white ml-2">
+          {item.fileType}
+        </span>
+      );
+    }
+    
+    return null;
+  };
+
+  const handleClick = () => {
+    if (item.type === 'directory') {
+      setIsOpen(!isOpen);
+    } else if (item.isClickable) {
+      onSelectFile(item);
+    }
+  };
+
+  const indentStyle = { paddingLeft: `${depth * 16 + 8}px` };
+
   return (
-    <div className="select-none">
-      <div 
-        className={`flex items-center py-1 px-2 rounded text-sm ${
-          selectedPath === item.path 
-            ? 'bg-blue-100 text-blue-900 border border-blue-300' 
-            : hasMetadata 
-              ? 'hover:bg-gray-100 cursor-pointer text-gray-900' 
-              : 'text-gray-700'
+    <div>
+      <div
+        className={`flex items-center py-1 px-2 cursor-pointer hover:bg-gray-100 ${
+          isSelected ? 'bg-blue-100 border-r-2 border-blue-600' : ''
+        } ${
+          !item.isClickable && item.type === 'file' ? 'opacity-60 cursor-default hover:bg-transparent' : ''
         }`}
-        style={{ paddingLeft: `${(depth * 12) + 8}px` }}
+        style={indentStyle}
         onClick={handleClick}
       >
-        {isDirectory ? (
-          <svg 
-            className={`w-4 h-4 mr-1 transition-transform ${isOpen ? 'rotate-90' : ''}`} 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        ) : (
-          <span className="mr-1">
-            <FileIcon filename={item.name} />
+        {item.type === 'directory' && (
+          <span className="text-gray-600 mr-1 text-sm">
+            {isOpen ? '▼' : '▶'}
           </span>
         )}
         
-        <span className="truncate">{item.name}</span>
+        <span className="mr-2">{getFileIcon()}</span>
         
-        {!isDirectory && item.metadata && (
-          <ComponentBadge type={item.metadata.type} />
-        )}
+        <span className={`text-sm ${
+          item.isClickable ? 'text-gray-900' : 'text-gray-500'
+        } ${
+          item.metadata ? 'font-medium' : ''
+        }`}>
+          {item.name}
+        </span>
+        
+        {getFileTypeBadge()}
       </div>
       
-      {isDirectory && isOpen && item.children && Array.isArray(item.children) && (
+      {isOpen && hasChildren && (
         <div>
-          {item.children.map((child) => (
+          {item.children!.map((child) => (
             <FileTreeItem
               key={child.path}
               item={child}
@@ -131,94 +129,111 @@ const FileTreeItem = ({ item, depth, selectedPath, onSelectFile }: FileTreeItemP
       )}
     </div>
   );
-};
+}
 
 // Build a file tree from all files and component metadata
 function buildFileTree(allFiles: GitHubFile[], components: ComponentMetadata[]): FileItem[] {
-  const rootItems: Record<string, FileItem> = {};
-  
   // Create a map of file paths to components for quick lookup
   const componentMap = new Map<string, ComponentMetadata>();
   components.forEach(component => {
     componentMap.set(component.file, component);
   });
   
-  // Build the file tree from all files
-  allFiles.forEach(file => {
-    const pathParts = file.path.split('/').filter(Boolean);
-    
-    let currentPath = '';
-    let currentItems = rootItems;
-    
-    // Handle directories
-    if (file.type === 'tree') {
-      for (let i = 0; i < pathParts.length; i++) {
-        const part = pathParts[i];
-        currentPath = currentPath ? `${currentPath}/${part}` : `/${part}`;
-        
-        if (!currentItems[part]) {
-          currentItems[part] = {
-            name: part,
-            path: currentPath,
-            type: 'directory',
-            children: {} as Record<string, FileItem>
-          };
-        }
-        
-        if (i < pathParts.length - 1) {
-          currentItems = currentItems[part].children as Record<string, FileItem>;
-        }
-      }
-    } else {
-      // Handle files
-      for (let i = 0; i < pathParts.length - 1; i++) {
-        const part = pathParts[i];
-        currentPath = currentPath ? `${currentPath}/${part}` : `/${part}`;
-        
-        if (!currentItems[part]) {
-          currentItems[part] = {
-            name: part,
-            path: currentPath,
-            type: 'directory',
-            children: {} as Record<string, FileItem>
-          };
-        }
-        
-        currentItems = currentItems[part].children as Record<string, FileItem>;
-      }
+  // Helper function to determine file type for non-component files
+  const getFileType = (path: string): 'file' | 'api' | 'config' | 'util' | 'type' | 'test' => {
+    if (path.includes('/api/')) return 'api';
+    if (path.match(/\.(config|json)$/)) return 'config';
+    if (path.match(/\.(test|spec)\./)) return 'test';
+    if (path.match(/\.(d\.ts|types)/)) return 'type';
+    if (path.includes('/lib/') || path.includes('/utils/') || path.includes('/helpers/')) return 'util';
+    return 'file';
+  };
+
+  // Filter and process files
+  const processedFiles = allFiles
+    .filter(file => 
+      file.type === 'blob' &&
+      !file.path.includes('node_modules') &&
+      !file.path.includes('.next') &&
+      !file.path.includes('dist') &&
+      !file.path.includes('build') &&
+      !file.path.includes('.git')
+    )
+    .map(file => {
+      const component = componentMap.get(file.path);
+      const fileType = getFileType(file.path);
       
-      // Add the file
-      const fileName = pathParts[pathParts.length - 1];
-      const fileFinalPath = currentPath ? `${currentPath}/${fileName}` : `/${fileName}`;
-      
-      currentItems[fileName] = {
-        name: fileName,
-        path: fileFinalPath,
-        type: 'file',
-        metadata: componentMap.get(file.path) || componentMap.get(fileFinalPath)
+      return {
+        name: file.path.split('/').pop() || '',
+        path: file.path,
+        type: 'file' as const,
+        fileType,
+        isClickable: !!(component || 
+          file.path.match(/\.(tsx|jsx|ts|js|json|md|txt|yml|yaml)$/)),
+        metadata: component,
       };
+    });
+
+  // Build tree structure using a simpler approach
+  const tree: FileItem[] = [];
+  const pathMap = new Map<string, FileItem>();
+
+  // Create directory structure
+  processedFiles.forEach(file => {
+    const pathParts = file.path.split('/');
+    
+    // Create directory nodes for each path segment
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      const dirPath = pathParts.slice(0, i + 1).join('/');
+      
+      if (!pathMap.has(dirPath)) {
+        const dirItem: FileItem = {
+          name: pathParts[i],
+          path: dirPath,
+          type: 'directory',
+          isClickable: false,
+          children: [],
+        };
+        pathMap.set(dirPath, dirItem);
+      }
+    }
+    
+    // Add the file
+    pathMap.set(file.path, file);
+  });
+
+  // Build the hierarchical structure
+  pathMap.forEach((item, path) => {
+    const pathParts = path.split('/');
+    
+    if (pathParts.length === 1) {
+      // Root level item
+      tree.push(item);
+    } else {
+      // Find parent and add to its children
+      const parentPath = pathParts.slice(0, -1).join('/');
+      const parent = pathMap.get(parentPath);
+      if (parent && parent.children) {
+        parent.children.push(item);
+      }
     }
   });
-  
-  // Convert the nested object structure to arrays
-  function convertToArray(items: Record<string, FileItem>): FileItem[] {
-    return Object.values(items).map(item => {
-      if (item.type === 'directory' && item.children) {
-        return {
-          ...item,
-          children: convertToArray(item.children as Record<string, FileItem>)
-        };
+
+  // Sort function for tree items
+  const sortTree = (items: FileItem[]): FileItem[] => {
+    return items.sort((a, b) => {
+      // Directories first, then files
+      if (a.type !== b.type) {
+        return a.type === 'directory' ? -1 : 1;
       }
-      return item;
-    }).sort((a, b) => {
-      // Directories first, then alphabetical
-      if (a.type === 'directory' && b.type === 'file') return -1;
-      if (a.type === 'file' && b.type === 'directory') return 1;
       return a.name.localeCompare(b.name);
-    });
-  }
-  
-  return convertToArray(rootItems);
+    }).map(item => ({
+      ...item,
+      children: item.children ? sortTree(item.children) : undefined,
+    }));
+  };
+
+  return sortTree(tree);
 }
 
 interface GitHubFile {
@@ -263,7 +278,7 @@ export default function FileExplorer({
   }, [onSelectComponent]);
   
   return (
-    <div className="h-full flex flex-col bg-white border-r border-gray-300">
+    <div className="h-full flex flex-col bg-white">
       <div className="p-3 border-b border-gray-300 bg-white">
         <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
           Files

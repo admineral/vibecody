@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import ReactFlow, { 
   Background, 
   Controls, 
@@ -53,6 +53,7 @@ interface CanvasProps {
   onEdgesChange: OnEdgesChange;
   onNodeClick: (nodeId: string) => void;
   onResetLayout: () => void;
+  selectedNodeId?: string | null;
 }
 
 function CanvasControls({ onReset }: { onReset: () => void }) {
@@ -74,9 +75,32 @@ function CanvasContent({
   onNodesChange, 
   onEdgesChange, 
   onNodeClick, 
-  onResetLayout 
+  onResetLayout,
+  selectedNodeId 
 }: CanvasProps) {
-  const { fitView } = useReactFlow();
+  const { fitView, setCenter, getNode } = useReactFlow();
+  
+  // Auto-pan to selected node
+  useEffect(() => {
+    if (selectedNodeId && nodes.length > 0) {
+      // Add a small delay to ensure nodes are properly rendered
+      const timeoutId = setTimeout(() => {
+        const node = getNode(selectedNodeId);
+        if (node && node.position) {
+          // Calculate the center position of the node
+          const nodeWidth = node.width || 220; // Default node width from ComponentNode
+          const nodeHeight = node.height || 120; // Default node height
+          const centerX = node.position.x + nodeWidth / 2;
+          const centerY = node.position.y + nodeHeight / 2;
+          
+          // Pan to the node with a smooth transition
+          setCenter(centerX, centerY, { zoom: 1, duration: 800 });
+        }
+      }, 100); // Small delay to ensure rendering is complete
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedNodeId, nodes, getNode, setCenter]);
   
   // Initial fit view
   const onInit = useCallback(() => {

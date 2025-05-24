@@ -30,19 +30,21 @@ interface PropertiesPanelProps {
   component: ComponentMetadata | null;
   relatedComponents: ComponentMetadata[];
   onSelectComponent: (componentName: string) => void;
+  repoUrl?: string;
 }
 
 export default function PropertiesPanel({
   component,
   relatedComponents,
-  onSelectComponent
+  onSelectComponent,
+  repoUrl
 }: PropertiesPanelProps) {
   const [activeTab, setActiveTab] = useState<'props' | 'code' | 'connections'>('props');
   
   // If no component selected, show empty state
   if (!component) {
     return (
-      <div className="h-full flex flex-col bg-white border-l border-gray-300 p-6">
+      <div className="h-full flex flex-col bg-white p-6">
         <div className="flex flex-col items-center justify-center h-full text-center">
           <svg 
             className="w-16 h-16 text-gray-300 mb-4" 
@@ -72,7 +74,7 @@ export default function PropertiesPanel({
   ).filter(Boolean) as ComponentMetadata[];
   
   return (
-    <div className="h-full flex flex-col bg-white border-l border-gray-300 overflow-hidden">
+    <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-300 flex items-center justify-between bg-white">
         <div>
@@ -244,7 +246,11 @@ export default function PropertiesPanel({
         )}
         
         {activeTab === 'code' && (
-          <CodeViewer filename={component.file} componentName={component.name} />
+          <CodeViewer 
+            filename={component.file} 
+            content={component.content}
+            repoUrl={repoUrl} 
+          />
         )}
       </div>
     </div>

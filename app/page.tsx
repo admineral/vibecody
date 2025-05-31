@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import Canvas from './components/canvas/Canvas';
 import FileExplorer from './components/explorer/FileExplorer';
 import PropertiesPanel from './components/properties/PropertiesPanel';
@@ -13,6 +15,81 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import 'reactflow/dist/style.css';
+
+// Dynamic import for 3D component to prevent SSR issues
+const CodeCarousel3D = dynamic(() => import('./components/canvas/CodeCarousel3D'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+      <div className="text-white text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
+        <p>Loading 3D Carousel...</p>
+      </div>
+    </div>
+  ),
+});
+
+// Error boundary for 3D component
+function ThreeDErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const handleError = (error: ErrorEvent) => {
+      if (error.message?.includes('reconciler') || 
+          error.message?.includes('fiber') ||
+          error.message?.includes('ReactCurrentOwner') ||
+          error.message?.includes('react-three')) {
+        console.error('3D rendering error caught:', error);
+        setHasError(true);
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason?.message?.includes('reconciler') || 
+          event.reason?.message?.includes('fiber') ||
+          event.reason?.message?.includes('ReactCurrentOwner') ||
+          event.reason?.message?.includes('react-three')) {
+        console.error('3D rendering promise rejection caught:', event.reason);
+        setHasError(true);
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="text-white text-center">
+          <div className="text-red-400 mb-4">
+            <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium mb-2">3D View Error</h3>
+          <p className="text-gray-300">The 3D visualization encountered a compatibility issue.</p>
+          <p className="text-sm text-gray-400 mt-2">This may be due to React Three Fiber compatibility with your React version.</p>
+          <p className="text-sm text-gray-400 mt-1">Please use the 2D canvas view instead.</p>
+          <button 
+            onClick={() => setHasError(false)}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
 
 interface GitHubFile {
   path: string;
@@ -29,10 +106,62 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [message, setMessage] = useState('');
   const [allFiles, setAllFiles] = useState<GitHubFile[]>([]);
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
+  const [cacheStats, setCacheStats] = useState<{
+    totalFiles: number;
+    totalSizeMB: number;
+    oldestFile?: string;
+    newestFile?: string;
+  } | null>(null);
+  const [showCacheInfo, setShowCacheInfo] = useState(false);
   
   const selectedComponent = selectedNode 
     ? components.find(c => c.name === selectedNode) || null
     : null;
+
+  // Fetch cache stats on component mount
+  useEffect(() => {
+    const fetchCacheStats = async () => {
+      try {
+        const response = await fetch('/api/cache');
+        if (response.ok) {
+          const data = await response.json();
+          setCacheStats(data.stats);
+        }
+      } catch (error) {
+        console.error('Failed to fetch cache stats:', error);
+      }
+    };
+
+    fetchCacheStats();
+  }, []);
+
+  // Close cache info when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showCacheInfo && !(event.target as Element)?.closest('.cache-dropdown')) {
+        setShowCacheInfo(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCacheInfo]);
+
+  // Clear cache function
+  const clearCache = async () => {
+    try {
+      const response = await fetch('/api/cache', { method: 'DELETE' });
+      if (response.ok) {
+        setCacheStats({ totalFiles: 0, totalSizeMB: 0 });
+        setMessage('Cache cleared successfully');
+      } else {
+        setMessage('Failed to clear cache');
+      }
+    } catch {
+      setMessage('Error clearing cache');
+    }
+  };
   
   // Function to analyze GitHub repository
   const analyzeRepository = async () => {
@@ -69,18 +198,25 @@ export default function Home() {
       }
 
       const tempComponents: ComponentMetadata[] = [];
+      let buffer = ''; // Buffer to hold incomplete lines
+      let doneReading = false; // Variable to track if reader is done
       
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        doneReading = done; // Update doneReading status
+        if (doneReading) break;
         
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true }); 
         
-        for (const line of lines) {
+        let eolIndex;
+        while ((eolIndex = buffer.indexOf('\n')) >= 0) { 
+          const line = buffer.slice(0, eolIndex).trim();
+          buffer = buffer.slice(eolIndex + 1);
+
           if (line.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.slice(6));
+              const rawJson = line.slice(6);
+              const data = JSON.parse(rawJson);
               
               switch (data.type) {
                 case 'status':
@@ -106,7 +242,8 @@ export default function Home() {
                 case 'complete':
                   // Final update with all components and relationships built
                   updateComponents(data.components);
-                  setMessage(`Successfully analyzed ${data.analyzedFiles} components from ${data.totalFiles} files`);
+                  const cacheMessage = data.fromCache ? ' (from cache)' : '';
+                  setMessage(`Successfully analyzed ${data.analyzedFiles} components from ${data.totalFiles} files${cacheMessage}`);
                   break;
                   
                 case 'error':
@@ -117,6 +254,40 @@ export default function Home() {
               console.error('Failed to parse SSE data:', e);
             }
           }
+        }
+      }
+
+      // If the stream ends and there's still data in the buffer, try to process it
+      if (doneReading && buffer.trim().startsWith('data: ')) {
+        try {
+          const rawJson = buffer.trim().slice(6);
+          const data = JSON.parse(rawJson);
+          // Handle the last piece of data (similar to the switch statement above)
+           switch (data.type) {
+              case 'status':
+                setMessage(data.message);
+                break;
+              case 'files':
+                setAllFiles(data.allFiles || []);
+                break;
+              case 'component':
+                tempComponents.push(data.component);
+                updateComponents([...tempComponents]);
+                setMessage(`Analyzing... Found ${tempComponents.length} components`);
+                break;
+              case 'progress':
+                setMessage(`Analyzing file ${data.current}/${data.total}: ${data.file}`);
+                break;
+              case 'complete':
+                updateComponents(data.components);
+                setMessage(`Successfully analyzed ${data.analyzedFiles} components from ${data.totalFiles} files`);
+                break;
+              case 'error':
+                setMessage(`Error: ${data.error}`);
+                break;
+            }
+        } catch (e) {
+          console.error('Failed to parse final SSE data:', e, 'Buffer content:', buffer);
         }
       }
     } catch (error) {
@@ -196,6 +367,126 @@ export default function Home() {
             )}
           </button>
           
+          {/* View mode toggle */}
+          {hasComponents && (
+            <div className="flex items-center bg-gray-800 rounded-md p-1">
+              <button
+                onClick={() => setViewMode('2d')}
+                className={`px-3 py-1 rounded text-sm transition-colors ${
+                  viewMode === '2d' 
+                    ? 'bg-gray-700 text-white' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                2D Graph
+              </button>
+              <button
+                onClick={() => setViewMode('3d')}
+                className={`px-3 py-1 rounded text-sm transition-colors ${
+                  viewMode === '3d' 
+                    ? 'bg-gray-700 text-white' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                3D Carousel
+              </button>
+            </div>
+          )}
+          
+          {/* Cache Management */}
+          <div className="relative cache-dropdown">
+            <button
+              onClick={() => setShowCacheInfo(!showCacheInfo)}
+              className="px-4 py-1 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center text-sm"
+              title="Cache Management"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+              </svg>
+              Cache
+              {cacheStats && cacheStats.totalFiles > 0 && (
+                <span className="ml-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {cacheStats.totalFiles}
+                </span>
+              )}
+            </button>
+            
+            {showCacheInfo && (
+              <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-300 rounded-md shadow-lg z-50">
+                <div className="p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Cache Statistics</h3>
+                  {cacheStats ? (
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div className="flex justify-between">
+                        <span>Cached repositories:</span>
+                        <span className="font-medium">{cacheStats.totalFiles}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total size:</span>
+                        <span className="font-medium">{cacheStats.totalSizeMB} MB</span>
+                      </div>
+                      {cacheStats.newestFile && (
+                        <div className="flex justify-between">
+                          <span>Last cached:</span>
+                          <span className="font-medium">
+                            {new Date(cacheStats.newestFile).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="pt-2 border-t border-gray-200">
+                        <button
+                          onClick={() => {
+                            clearCache();
+                            setShowCacheInfo(false);
+                          }}
+                          className="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+                        >
+                          Clear Cache
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Loading cache statistics...</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 3D Card Demo Link */}
+          <Link 
+            href="/3d-card"
+            className="px-4 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center text-sm"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            3D Card Demo
+          </Link>
+          
+          {/* 3D Code Universe Link */}
+          <Link 
+            href="/3dcode"
+            className="px-4 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center text-sm"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            3D Code Universe
+          </Link>
+          
+          {/* CodeSandbox2 Link */}
+          <Link 
+            href="/codesandbox2"
+            className="px-4 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center text-sm"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l-5.172-5.172a4 4 0 010-5.656L10 4l5.172 5.172a4 4 0 010 5.656L10 20z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 4v16" />
+            </svg>
+            CodeSandbox2
+          </Link>
+          
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-2 rounded-md hover:bg-gray-800 transition-colors"
@@ -266,15 +557,24 @@ export default function Home() {
           {/* Canvas */}
           <ResizablePanel defaultSize={isSidebarOpen && isDetailsPanelOpen ? 60 : isSidebarOpen || isDetailsPanelOpen ? 80 : 100}>
             {hasComponents ? (
-              <Canvas 
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onNodeClick={(nodeId) => selectNode(nodeId || null)}
-                onResetLayout={resetLayout}
-                selectedNodeId={selectedNode}
-              />
+              viewMode === '2d' ? (
+                <Canvas 
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onNodeClick={(nodeId) => selectNode(nodeId || null)}
+                  onResetLayout={resetLayout}
+                  selectedNodeId={selectedNode}
+                />
+              ) : (
+                <ThreeDErrorBoundary>
+                  <CodeCarousel3D 
+                    components={components}
+                    onSelectComponent={selectNode}
+                  />
+                </ThreeDErrorBoundary>
+              )
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-8">
                 <svg className="w-24 h-24 text-gray-300 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

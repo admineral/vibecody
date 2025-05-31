@@ -57,6 +57,8 @@ export interface FileItem {
   isClickable?: boolean;
   children?: FileItem[];
   metadata?: ComponentMetadata;
+  isSelected?: boolean; // For multiselect functionality
+  isIgnored?: boolean;  // For ignore list functionality
 }
 
 // For canvas state management
@@ -71,4 +73,17 @@ export interface GitHubRepo {
   owner: string;
   name: string;
   branch?: string;
+}
+
+// Ignore list management
+export interface IgnoreListState {
+  ignoredFiles: Set<string>;
+  selectedFiles: Set<string>;
+}
+
+// File explorer state
+export interface FileExplorerState {
+  ignoreList: string[];
+  selectedFiles: string[];
+  showIgnoreList: boolean;
 } 

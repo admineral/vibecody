@@ -2,19 +2,71 @@
 
 import { useState, useCallback } from 'react';
 import { FileItem, ComponentType, ComponentMetadata } from '@/app/lib/types';
+import { useComponentData } from '@/app/lib/context/ComponentDataContext';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import IgnoreList from './IgnoreList';
+import { 
+  CheckSquare, 
+  Square, 
+  Minus, 
+  EyeOff, 
+  RotateCcw,
+  ChevronDown,
+  ChevronRight
+} from 'lucide-react';
 
 interface FileTreeItemProps {
   item: FileItem;
   depth: number;
   selectedPath: string | null;
   onSelectFile: (file: FileItem) => void;
+  selectedFiles: Set<string>;
+  onToggleFileSelection: (filePath: string, isDirectory?: boolean) => void;
+  ignoredFiles: Set<string>;
 }
 
 // Component for a single file or directory in the tree
-function FileTreeItem({ item, depth, selectedPath, onSelectFile }: FileTreeItemProps) {
+function FileTreeItem({ 
+  item, 
+  depth, 
+  selectedPath, 
+  onSelectFile, 
+  selectedFiles,
+  onToggleFileSelection,
+  ignoredFiles
+}: FileTreeItemProps) {
   const [isOpen, setIsOpen] = useState(depth < 2); // Auto-expand first 2 levels
   const hasChildren = item.children && item.children.length > 0;
   const isSelected = selectedPath === item.path;
+  const isFileSelected = selectedFiles.has(item.path);
+  const isIgnored = ignoredFiles.has(item.path);
+  
+  // Calculate selection state for directories
+  const getDirectorySelectionState = () => {
+    if (!hasChildren) return 'none';
+    
+    const allChildPaths = getAllChildPaths(item);
+    const selectedChildPaths = allChildPaths.filter(path => selectedFiles.has(path));
+    
+    if (selectedChildPaths.length === 0) return 'none';
+    if (selectedChildPaths.length === allChildPaths.length) return 'all';
+    return 'partial';
+  };
+
+  const getAllChildPaths = (fileItem: FileItem): string[] => {
+    const paths: string[] = [];
+    if (fileItem.type === 'file') {
+      paths.push(fileItem.path);
+    }
+    if (fileItem.children) {
+      fileItem.children.forEach(child => {
+        paths.push(...getAllChildPaths(child));
+      });
+    }
+    return paths;
+  };
   
   // Get file type icon
   const getFileIcon = () => {
@@ -82,36 +134,87 @@ function FileTreeItem({ item, depth, selectedPath, onSelectFile }: FileTreeItemP
     }
   };
 
+  const handleCheckboxChange = () => {
+    onToggleFileSelection(item.path, item.type === 'directory');
+  };
+
   const indentStyle = { paddingLeft: `${depth * 16 + 8}px` };
+  const directionSelectionState = item.type === 'directory' ? getDirectorySelectionState() : 'none';
 
   return (
-    <div>
+    <div className={isIgnored ? 'opacity-50' : ''}>
       <div
-        className={`flex items-center py-1 px-2 cursor-pointer hover:bg-gray-100 ${
+        className={`flex items-center py-1 px-2 hover:bg-gray-100 ${
           isSelected ? 'bg-blue-100 border-r-2 border-blue-600' : ''
         } ${
-          !item.isClickable && item.type === 'file' ? 'opacity-60 cursor-default hover:bg-transparent' : ''
+          !item.isClickable && item.type === 'file' ? 'opacity-60' : ''
         }`}
         style={indentStyle}
-        onClick={handleClick}
       >
+        {/* Checkbox for selection */}
+        <div className="mr-2 flex items-center">
+          {item.type === 'directory' ? (
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCheckboxChange();
+              }}
+              className="cursor-pointer"
+            >
+              {directionSelectionState === 'all' ? (
+                <CheckSquare className="w-4 h-4 text-blue-600" />
+              ) : directionSelectionState === 'partial' ? (
+                <Minus className="w-4 h-4 text-blue-600" />
+              ) : (
+                <Square className="w-4 h-4 text-gray-400" />
+              )}
+            </div>
+          ) : (
+            <Checkbox
+              checked={isFileSelected}
+              onCheckedChange={handleCheckboxChange}
+              className="w-4 h-4"
+            />
+          )}
+        </div>
+
+        {/* Directory expand/collapse */}
         {item.type === 'directory' && (
-          <span className="text-gray-600 mr-1 text-sm">
-            {isOpen ? '▼' : '▶'}
-          </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+            className="mr-1 text-gray-600 hover:text-gray-800"
+          >
+            {isOpen ? (
+              <ChevronDown className="w-3 h-3" />
+            ) : (
+              <ChevronRight className="w-3 h-3" />
+            )}
+          </button>
         )}
         
         <span className="mr-2">{getFileIcon()}</span>
         
-        <span className={`text-sm ${
-          item.isClickable ? 'text-gray-900' : 'text-gray-500'
-        } ${
-          item.metadata ? 'font-medium' : ''
-        }`}>
-          {item.name}
-        </span>
-        
-        {getFileTypeBadge()}
+        <div 
+          className="flex-1 flex items-center cursor-pointer"
+          onClick={handleClick}
+        >
+          <span className={`text-sm ${
+            item.isClickable ? 'text-gray-900' : 'text-gray-500'
+          } ${
+            item.metadata ? 'font-medium' : ''
+          }`}>
+            {item.name}
+          </span>
+          
+          {getFileTypeBadge()}
+          
+          {isIgnored && (
+            <EyeOff className="w-3 h-3 ml-2 text-gray-400" />
+          )}
+        </div>
       </div>
       
       {isOpen && hasChildren && (
@@ -123,6 +226,9 @@ function FileTreeItem({ item, depth, selectedPath, onSelectFile }: FileTreeItemP
               depth={depth + 1}
               selectedPath={selectedPath}
               onSelectFile={onSelectFile}
+              selectedFiles={selectedFiles}
+              onToggleFileSelection={onToggleFileSelection}
+              ignoredFiles={ignoredFiles}
             />
           ))}
         </div>
@@ -255,6 +361,17 @@ export default function FileExplorer({
   selectedComponent,
   onSelectComponent
 }: FileExplorerProps) {
+  const {
+    selectedFiles,
+    ignoredFiles,
+    toggleFileSelection,
+    clearFileSelection,
+    selectAllFiles,
+    addToIgnoreList
+  } = useComponentData();
+
+  const [showIgnoreList, setShowIgnoreList] = useState(false);
+
   // Build file tree from all files if available, otherwise fall back to component-only tree
   const fileTree = allFiles.length > 0 
     ? buildFileTree(allFiles, components)
@@ -276,16 +393,152 @@ export default function FileExplorer({
       onSelectComponent(file.metadata.name);
     }
   }, [onSelectComponent]);
+
+  // Get all file paths for select all functionality
+  const getAllFilePaths = (items: FileItem[]): string[] => {
+    const paths: string[] = [];
+    items.forEach(item => {
+      if (item.type === 'file') {
+        paths.push(item.path);
+      }
+      if (item.children) {
+        paths.push(...getAllFilePaths(item.children));
+      }
+    });
+    return paths;
+  };
+
+  const allFilePaths = getAllFilePaths(fileTree);
+  const selectedFilesArray = Array.from(selectedFiles);
+
+  // Handle directory selection
+  const handleToggleFileSelection = (filePath: string, isDirectory?: boolean) => {
+    if (isDirectory) {
+      // Find the directory item and toggle all its children
+      const findDirectoryAndChildren = (items: FileItem[], targetPath: string): string[] => {
+        for (const item of items) {
+          if (item.path === targetPath && item.type === 'directory') {
+            return getAllFilePaths([item]);
+          }
+          if (item.children) {
+            const result = findDirectoryAndChildren(item.children, targetPath);
+            if (result.length > 0) return result;
+          }
+        }
+        return [];
+      };
+
+      const childPaths = findDirectoryAndChildren(fileTree, filePath);
+      const allSelected = childPaths.every(path => selectedFiles.has(path));
+      
+      if (allSelected) {
+        // Deselect all children
+        childPaths.forEach(path => {
+          if (selectedFiles.has(path)) {
+            toggleFileSelection(path);
+          }
+        });
+      } else {
+        // Select all children
+        childPaths.forEach(path => {
+          if (!selectedFiles.has(path)) {
+            toggleFileSelection(path);
+          }
+        });
+      }
+    } else {
+      toggleFileSelection(filePath);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedFilesArray.length === allFilePaths.length) {
+      clearFileSelection();
+    } else {
+      selectAllFiles(allFilePaths);
+    }
+  };
+
+  const handleAddToIgnoreList = () => {
+    if (selectedFilesArray.length > 0) {
+      addToIgnoreList(selectedFilesArray);
+      clearFileSelection();
+    }
+  };
   
   return (
     <div className="h-full flex flex-col bg-white">
+      {/* Header */}
       <div className="p-3 border-b border-gray-300 bg-white">
         <h2 className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
           Files
         </h2>
       </div>
+
+      {/* Ignore List */}
+      <IgnoreList 
+        isOpen={showIgnoreList} 
+        onToggle={() => setShowIgnoreList(!showIgnoreList)} 
+      />
+
+      {/* Selection Controls */}
+      {fileTree.length > 0 && (
+        <div className="p-2 border-b border-gray-300 bg-gray-50">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAll}
+                className="h-6 px-2 text-xs"
+              >
+                {selectedFilesArray.length === allFilePaths.length ? (
+                  <>
+                    <Square className="w-3 h-3 mr-1" />
+                    Deselect All
+                  </>
+                ) : (
+                  <>
+                    <CheckSquare className="w-3 h-3 mr-1" />
+                    Select All
+                  </>
+                )}
+              </Button>
+              
+              {selectedFilesArray.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFileSelection}
+                  className="h-6 px-2 text-xs"
+                >
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
+            
+            <span className="text-xs text-gray-500">
+              {selectedFilesArray.length} selected
+            </span>
+          </div>
+
+          {selectedFilesArray.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddToIgnoreList}
+              className="w-full h-6 text-xs"
+            >
+              <EyeOff className="w-3 h-3 mr-1" />
+              Add to Ignore List
+            </Button>
+          )}
+        </div>
+      )}
       
-      <div className="flex-1 overflow-y-auto">
+      {/* File Tree */}
+      <ScrollArea className="flex-1">
         {fileTree.length > 0 ? (
           fileTree.map((item) => (
             <FileTreeItem
@@ -294,6 +547,9 @@ export default function FileExplorer({
               depth={0}
               selectedPath={selectedPath}
               onSelectFile={handleSelectFile}
+              selectedFiles={selectedFiles}
+              onToggleFileSelection={handleToggleFileSelection}
+              ignoredFiles={ignoredFiles}
             />
           ))
         ) : (
@@ -302,7 +558,7 @@ export default function FileExplorer({
             <p className="text-xs text-gray-400 mt-2">Analyze a repository to see files</p>
           </div>
         )}
-      </div>
+      </ScrollArea>
     </div>
   );
 } 

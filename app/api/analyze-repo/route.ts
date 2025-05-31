@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ComponentMetadata, ComponentType, PropMetadata } from '@/app/lib/types';
+import { getCachedRepo, cacheRepo } from '@/app/lib/cache';
 
 // GitHub API types
 interface GitHubTreeItem {
@@ -10,7 +11,7 @@ interface GitHubTreeItem {
 
 export async function POST(request: NextRequest) {
   try {
-    const { repoUrl, branch = 'main' } = await request.json();
+    const { repoUrl, branch = 'main', includeAllFiles = false } = await request.json();
     
     if (!repoUrl) {
       return NextResponse.json(
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     const writer = stream.writable.getWriter();
 
     // Start processing in the background
-    processRepository(owner, repoName, branch, writer, encoder).finally(() => {
+    processRepository(owner, repoName, branch, writer, encoder, includeAllFiles).finally(() => {
       writer.close();
     });
 
@@ -64,9 +65,47 @@ async function processRepository(
   repoName: string, 
   branch: string,
   writer: WritableStreamDefaultWriter<Uint8Array>,
-  encoder: TextEncoder
+  encoder: TextEncoder,
+  includeAllFiles: boolean = false
 ) {
   try {
+    const repoUrl = `https://github.com/${owner}/${repoName}`;
+    
+    // Check cache first
+    await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'status', message: 'Checking cache...' })}\n\n`));
+    
+    const cachedData = await getCachedRepo(repoUrl, branch);
+    if (cachedData) {
+      console.log(`📦 Using cached data for ${repoUrl}#${branch}`);
+      
+      // Send cached files immediately
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ 
+        type: 'files', 
+        allFiles: cachedData.allFiles,
+        repository: cachedData.repository
+      })}\n\n`));
+      
+      // Send cached components
+      for (const component of cachedData.components) {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ 
+          type: 'component', 
+          component 
+        })}\n\n`));
+      }
+      
+      // Send completion message
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ 
+        type: 'complete',
+        components: cachedData.components,
+        totalFiles: cachedData.allFiles.length,
+        analyzedFiles: cachedData.components.length,
+        apiCallsUsed: 0, // No API calls used for cached data
+        fromCache: true
+      })}\n\n`));
+      
+      return;
+    }
+
     // Send initial status
     await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'status', message: 'Fetching repository structure...' })}\n\n`));
 
@@ -98,12 +137,14 @@ async function processRepository(
     const files = treeData.tree as GitHubTreeItem[];
 
     // Get all files (not just component files) for the file tree
-    const allFiles = files.filter(file => 
-      !file.path.includes('node_modules') &&
-      !file.path.includes('.next') &&
-      !file.path.includes('dist') &&
-      !file.path.includes('build')
-    );
+    const allFiles = includeAllFiles 
+      ? files.filter(file => file.type === 'blob') // Only include actual files, not directories
+      : files.filter(file => 
+          !file.path.includes('node_modules') &&
+          !file.path.includes('.next') &&
+          !file.path.includes('dist') &&
+          !file.path.includes('build')
+        );
 
     // Send all files immediately for the file tree
     await writer.write(encoder.encode(`data: ${JSON.stringify({ 
@@ -111,6 +152,84 @@ async function processRepository(
       allFiles,
       repository: { owner, name: repoName, branch }
     })}\n\n`));
+
+    // When includeAllFiles is true, fetch content for ALL files
+    if (includeAllFiles) {
+      console.log(`📁 Loading ALL ${allFiles.length} files from repository`);
+      
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ 
+        type: 'status', 
+        message: `Loading ${allFiles.length} files...` 
+      })}\n\n`));
+
+      const components: ComponentMetadata[] = [];
+      let apiCallCount = 1;
+      
+      // Load ALL files without limit
+      for (let i = 0; i < allFiles.length; i++) {
+        const file = allFiles[i];
+        try {
+          apiCallCount++;
+          
+          // Send progress update
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ 
+            type: 'progress', 
+            current: i + 1,
+            total: allFiles.length,
+            file: file.path
+          })}\n\n`));
+          
+          const fileContent = await fetchFileContent(owner, repoName, file.path, branch);
+          
+          // Create a simple metadata for all files
+          const metadata: ComponentMetadata = {
+            name: file.path.split('/').pop()?.replace(/\.\w+$/, '') || file.path,
+            description: `File: ${file.path}`,
+            type: determineComponentType(file.path, fileContent), // Determine actual type
+            uses: [],
+            props: [],
+            file: file.path,
+            exports: [],
+            content: fileContent
+          };
+          
+          components.push(metadata);
+          
+          // Send the file data immediately
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ 
+            type: 'component', 
+            component: metadata 
+          })}\n\n`));
+          
+          // Small delay to prevent overwhelming the API
+          if (i % 10 === 0 && i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
+        } catch (error) {
+          console.warn(`Failed to load file ${file.path}:`, error);
+        }
+      }
+      
+      console.log(`🎉 Loaded ${components.length} files using ${apiCallCount} API calls`);
+      
+      // Cache the results
+      const repository = { owner, name: repoName, branch };
+      await cacheRepo(repoUrl, branch, components, allFiles, repository);
+      
+      // Send completion message
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ 
+        type: 'complete',
+        components,
+        totalFiles: allFiles.length,
+        analyzedFiles: components.length,
+        apiCallsUsed: apiCallCount,
+        fromCache: false,
+        allFilesMode: true
+      })}\n\n`));
+      
+      return; // Exit early when loading all files
+    }
 
     // Filter for React/Next.js component files with improved Next.js support
     const componentFiles = prioritizeNextJsFiles(files.filter(file => 
@@ -179,13 +298,18 @@ async function processRepository(
 
     console.log(`🎉 Analysis complete: ${apiCallCount} API calls, ${components.length} components found`);
     
+    // Cache the results for future use
+    const repository = { owner, name: repoName, branch };
+    await cacheRepo(repoUrl, branch, components, allFiles, repository);
+    
     // Send completion message with final data
     await writer.write(encoder.encode(`data: ${JSON.stringify({ 
       type: 'complete',
       components,
       totalFiles: allFiles.length,
       analyzedFiles: components.length,
-      apiCallsUsed: apiCallCount
+      apiCallsUsed: apiCallCount,
+      fromCache: false
     })}\n\n`));
     
   } catch (error) {

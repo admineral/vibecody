@@ -15,7 +15,7 @@ interface FileNode {
   path: string
   type: 'folder' | 'file'
   componentType?: ComponentType
-  children?: FileNode[]
+  children?: any
 }
 
 // Build file tree from components
@@ -45,7 +45,7 @@ function buildFileTree(components: ComponentMetadata[]): FileNode[] {
             name: part,
             path: currentPath,
             type: 'folder',
-            children: {},
+            children: {} as any,
           }
         }
         currentLevel = currentLevel[part].children as Record<string, FileNode>
@@ -139,7 +139,7 @@ function TreeNode({
       
       {node.type === 'folder' && isOpen && node.children && (
         <div>
-          {node.children.map((child) => (
+          {node.children.map((child: FileNode) => (
             <TreeNode
               key={child.path}
               node={child}

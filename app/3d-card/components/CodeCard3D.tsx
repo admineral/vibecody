@@ -70,7 +70,12 @@ export default function CodeCard3D({
     if (groupRef.current) {
       // Smooth position, rotation, and scale transitions
       easing.damp3(groupRef.current.position, position, 0.3, delta);
-      easing.dampE(groupRef.current.rotation, rotation, 0.3, delta);
+      // For Euler rotation, we need to set it directly or use individual components
+      groupRef.current.rotation.set(
+        THREE.MathUtils.lerp(groupRef.current.rotation.x, rotation[0], delta * 3),
+        THREE.MathUtils.lerp(groupRef.current.rotation.y, rotation[1], delta * 3),
+        THREE.MathUtils.lerp(groupRef.current.rotation.z, rotation[2], delta * 3)
+      );
       easing.damp3(groupRef.current.scale, scale, 0.3, delta);
     }
 

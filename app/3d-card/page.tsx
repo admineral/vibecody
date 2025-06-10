@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, Suspense } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Canvas } from '@react-three/fiber';
 import Scene3D from './components/Scene3D';

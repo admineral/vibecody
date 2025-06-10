@@ -15,14 +15,11 @@ import { calculateCirclePositions } from '../../utils/cardPositioning';
 
 interface Scene3Dv2Props {
   cardCount: number;
-  onCardCountChange: (count: number) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   orbitSpeed: number;
   onOrbitSpeedChange: (speed: number) => void;
-  onRegenerateFiles: () => void;
   onResetView: () => void;
-  // v2 specific props
   quality: 'low' | 'medium' | 'high' | 'ultra';
   particleDensity: number;
   bloomIntensity: number;
@@ -33,12 +30,10 @@ interface Scene3Dv2Props {
 
 export default function Scene3Dv2({
   cardCount,
-  onCardCountChange,
   viewMode,
   onViewModeChange,
   orbitSpeed,
   onOrbitSpeedChange,
-  onRegenerateFiles,
   onResetView,
   quality = 'high',
   particleDensity = 2000,
@@ -48,7 +43,7 @@ export default function Scene3Dv2({
   gradientIntensity = 0.8
 }: Scene3Dv2Props) {
   const groupRef = useRef<THREE.Group>(null);
-  const orbitControlsRef = useRef<any>(null);
+  const orbitControlsRef = useRef<React.ElementRef<typeof OrbitControls>>(null);
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
   const [circleRotation, setCircleRotation] = useState(0);
@@ -177,12 +172,6 @@ export default function Scene3Dv2({
 
   const handleCardHover = (index: number | null) => {
     setHoveredCardIndex(index);
-  };
-
-  // Handle file regeneration
-  const handleRegenerateFiles = () => {
-    mockData.regenerateFiles();
-    onRegenerateFiles();
   };
 
   return (

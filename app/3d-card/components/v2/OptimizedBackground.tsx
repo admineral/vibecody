@@ -1,9 +1,8 @@
 "use client"
 
 import { useRef, useMemo } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Plane } from '@react-three/drei';
 
 interface OptimizedBackgroundProps {
   particleCount: number;
@@ -19,8 +18,7 @@ export default function OptimizedBackground({
   gradientIntensity = 0.8
 }: OptimizedBackgroundProps) {
   const particlesRef = useRef<THREE.Points>(null);
-  const { viewport } = useThree();
-  
+
   // GPU Particle System
   const particles = useMemo(() => {
     const positions = new Float32Array(particleCount * 3);

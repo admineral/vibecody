@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { 
-  Sandpack,
   SandpackProvider,
   SandpackLayout,
   SandpackCodeEditor,
@@ -15,10 +14,10 @@ import { ComponentMetadata, ComponentType } from '../../lib/types';
 interface SandpackEditorProps {
   component: ComponentMetadata;
   allComponents: ComponentMetadata[];
-  repoUrl: string;
+  // repoUrl is not used in this component
 }
 
-export default function SandpackEditor({ component, allComponents, repoUrl }: SandpackEditorProps) {
+export default function SandpackEditor({ component, allComponents }: SandpackEditorProps) {
   const [showFileExplorer, setShowFileExplorer] = useState(true);
 
   // Create files object for Sandpack - include ALL files

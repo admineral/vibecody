@@ -24,11 +24,9 @@ interface FileTree3DSceneProps {
 
 export default function FileTree3DScene({ 
   components, 
-  allFiles, 
   selectedComponent, 
-  onSelectComponent,
-  repoUrl 
-}: FileTree3DSceneProps) {
+  onSelectComponent
+}: Pick<FileTree3DSceneProps, 'components' | 'selectedComponent' | 'onSelectComponent'>) {
   const sceneRef = useRef<Group>(null)
 
   return (
@@ -87,7 +85,6 @@ export default function FileTree3DScene({
           <group position={[-8, 0, 0]}>
             <FileTree3D 
               components={components}
-              allFiles={allFiles}
               selectedComponent={selectedComponent}
               onSelectComponent={onSelectComponent}
             />
@@ -98,7 +95,6 @@ export default function FileTree3DScene({
             <SandpackCard3D 
               component={selectedComponent}
               allComponents={components}
-              repoUrl={repoUrl}
             />
           </group>
         </group>

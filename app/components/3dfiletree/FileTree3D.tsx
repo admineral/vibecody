@@ -87,7 +87,7 @@ function TreeNode3D({
   useFrame(() => {
     if (meshRef.current) {
       const targetScale = hovered || isSelected ? 1.2 : 1.0;
-      meshRef.current.scale.lerp({ x: targetScale, y: targetScale, z: targetScale } as any, 0.1);
+      meshRef.current.scale.lerp({ x: targetScale, y: targetScale, z: targetScale } as Vector3, 0.1);
     }
   });
 
@@ -164,10 +164,9 @@ function TreeNode3D({
 
 export default function FileTree3D({ 
   components, 
-  allFiles, 
   selectedComponent, 
   onSelectComponent 
-}: FileTree3DProps) {
+}: Omit<FileTree3DProps, 'allFiles'>) {
   const groupRef = useRef<Group>(null);
 
   // Build tree structure
@@ -241,7 +240,7 @@ export default function FileTree3D({
   }, [components]);
 
   // Calculate positions for tree layout
-  const { nodePositions, connections } = useMemo(() => {
+  const { nodePositions } = useMemo(() => {
     const positions: Array<{ 
       node: TreeNode, 
       position: [number, number, number],
@@ -294,7 +293,6 @@ export default function FileTree3D({
     
     return { 
       nodePositions: positions,
-      connections: positions.filter(p => p.parentPosition)
     };
   }, [treeData]);
 

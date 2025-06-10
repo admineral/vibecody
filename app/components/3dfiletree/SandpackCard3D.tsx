@@ -11,10 +11,9 @@ import { ComponentMetadata, ComponentType } from '../../lib/types'
 interface SandpackCard3DProps {
   component: ComponentMetadata | null;
   allComponents: ComponentMetadata[];
-  repoUrl: string;
 }
 
-export default function SandpackCard3D({ component, allComponents, repoUrl }: SandpackCard3DProps) {
+export default function SandpackCard3D({ component, allComponents }: SandpackCard3DProps) {
   const groupRef = useRef<Group>(null);
 
   // Gentle floating animation

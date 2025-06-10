@@ -52,7 +52,7 @@ export function useMockData(initialCount: number = 12): MockDataControls {
       }
       return prevId;
     });
-  }, [files.length]);
+  }, [files]);
 
   const regenerateFiles = useCallback(() => {
     const newFiles = generateMockFiles(files.length);

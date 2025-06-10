@@ -14,7 +14,6 @@ const LAYER_HEIGHTS = {
 // Calculate 3D positions for all files based on relationships
 export function calculateFilePositions(components: ComponentMetadata[]): Record<string, Vector3> {
   const positions: Record<string, Vector3> = {}
-  const processed = new Set<string>()
   
   // Group components by type
   const componentsByType = groupFilesByType(components)

@@ -15,12 +15,21 @@ interface FileNode {
   path: string
   type: 'folder' | 'file'
   componentType?: ComponentType
-  children?: any
+  children?: FileNode[]
+}
+
+// Temporary interface for building the tree
+interface BuildingFileNode {
+  name: string
+  path: string
+  type: 'folder' | 'file'
+  componentType?: ComponentType
+  children?: Record<string, BuildingFileNode>
 }
 
 // Build file tree from components
 function buildFileTree(components: ComponentMetadata[]): FileNode[] {
-  const root: Record<string, FileNode> = {}
+  const root: Record<string, BuildingFileNode> = {}
   
   components.forEach(component => {
     const parts = component.file.split('/')
@@ -45,16 +54,16 @@ function buildFileTree(components: ComponentMetadata[]): FileNode[] {
             name: part,
             path: currentPath,
             type: 'folder',
-            children: {} as any,
+            children: {},
           }
         }
-        currentLevel = currentLevel[part].children as Record<string, FileNode>
+        currentLevel = currentLevel[part].children as Record<string, BuildingFileNode>
       }
     })
   })
   
   // Convert to array
-  const convertToArray = (obj: Record<string, FileNode>): FileNode[] => {
+  const convertToArray = (obj: Record<string, BuildingFileNode>): FileNode[] => {
     return Object.values(obj).map(node => ({
       ...node,
       children: node.children ? convertToArray(node.children) : undefined,
@@ -139,7 +148,7 @@ function TreeNode({
       
       {node.type === 'folder' && isOpen && node.children && (
         <div>
-          {node.children.map((child: FileNode) => (
+          {node.children.map((child) => (
             <TreeNode
               key={child.path}
               node={child}

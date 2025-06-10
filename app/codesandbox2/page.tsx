@@ -249,7 +249,6 @@ export default function CodeSandbox2Page() {
               <SandpackEditor 
                 component={selectedComponent || contextComponents[0]}
                 allComponents={contextComponents}
-                repoUrl={repoUrl}
               />
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-gray-50">

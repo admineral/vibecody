@@ -20,7 +20,6 @@ interface InstancedCardRendererProps {
 }
 
 const CARD_GEOMETRY_ARGS: [number, number, number] = [2, 3, 0.1];
-const _ROUNDED_RADIUS = 0.12;
 
 export default function InstancedCardRenderer({
   files,
@@ -36,10 +35,10 @@ export default function InstancedCardRenderer({
   const { camera, raycaster, pointer } = useThree();
   
   // Texture atlas for card content
-  const { atlas, getUVOffset, updateCard: _updateCard } = useTextureAtlas(files, quality);
+  const { atlas, getUVOffset } = useTextureAtlas(files, quality);
   
   // LOD system
-  const { getLODLevel: _getLODLevel, updateLODs } = useLODSystem(positions, camera.position, quality);
+  const { updateLODs } = useLODSystem(positions, camera.position, quality);
   
   // Instance matrices and attributes
   const instanceData = useMemo(() => {
@@ -146,7 +145,7 @@ export default function InstancedCardRenderer({
   });
   
   // Handle click events
-  const handlePointerDown = (event: any) => {
+  const handlePointerDown = (event: THREE.Event & { instanceId?: number }) => {
     if (event.instanceId !== undefined) {
       onCardClick(event.instanceId);
     }

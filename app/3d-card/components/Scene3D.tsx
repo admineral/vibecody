@@ -24,16 +24,14 @@ interface Scene3DProps {
 
 export default function Scene3D({
   cardCount,
-  onCardCountChange: _onCardCountChange,
   viewMode,
   onViewModeChange,
   orbitSpeed,
   onOrbitSpeedChange,
-  onRegenerateFiles: _onRegenerateFiles,
   onResetView
 }: Scene3DProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const orbitControlsRef = useRef<any>(null);
+  const orbitControlsRef = useRef<React.ElementRef<typeof OrbitControls>>(null);
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
   const [circleRotation, setCircleRotation] = useState(0);
@@ -314,12 +312,12 @@ export default function Scene3D({
 
       {/* Nebula clouds scattered around */}
       {[
-        { pos: [50, 30, -80], color: "#8b5cf6", size: 15 },
-        { pos: [-60, -20, -100], color: "#a855f7", size: 12 },
-        { pos: [30, -40, -120], color: "#c084fc", size: 18 },
-        { pos: [-40, 50, -90], color: "#ddd6fe", size: 10 },
+        { pos: [50, 30, -80] as [number, number, number], color: "#8b5cf6", size: 15 },
+        { pos: [-60, -20, -100] as [number, number, number], color: "#a855f7", size: 12 },
+        { pos: [30, -40, -120] as [number, number, number], color: "#c084fc", size: 18 },
+        { pos: [-40, 50, -90] as [number, number, number], color: "#ddd6fe", size: 10 },
       ].map((nebula, i) => (
-        <mesh key={i} position={nebula.pos as [number, number, number]}>
+        <mesh key={i} position={nebula.pos}>
           <sphereGeometry args={[nebula.size, 16, 16]} />
           <meshStandardMaterial 
             color={nebula.color}
@@ -341,9 +339,7 @@ export default function Scene3D({
       
       {/* Environment lighting with violet tones */}
       <hemisphereLight
-        color="#dda0dd"
-        groundColor="#4b0082"
-        intensity={0.4}
+        args={["#dda0dd", "#4b0082", 0.4]}
       />
 
       {/* Deep space fog */}

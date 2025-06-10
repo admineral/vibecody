@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, Suspense } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Canvas } from '@react-three/fiber';
 import { Stats } from '@react-three/drei';
@@ -33,7 +32,6 @@ export default function ThreeDCardPageV2() {
   const [viewMode, setViewMode] = useState<ViewMode>('orbit');
   const [orbitSpeed, setOrbitSpeed] = useState(0.5);
   const [showControls, setShowControls] = useState(true);
-  const [showInstructions, setShowInstructions] = useState(false); // Don't show by default in v2
   
   // V2 specific state
   const [quality, setQuality] = useState<'low' | 'medium' | 'high' | 'ultra'>('high');
@@ -115,12 +113,10 @@ export default function ThreeDCardPageV2() {
           {/* Main Scene */}
           <Scene3Dv2
             cardCount={cardCount}
-            onCardCountChange={setCardCount}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             orbitSpeed={orbitSpeed}
             onOrbitSpeedChange={setOrbitSpeed}
-            onRegenerateFiles={handleRegenerateFiles}
             onResetView={handleResetView}
             quality={quality}
             particleDensity={particleDensity}

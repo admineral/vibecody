@@ -40,7 +40,7 @@ const DEFAULT_STATE: ViewModeState = {
 
 export function useViewMode(): ViewModeControls {
   const [state, setState] = useState<ViewModeState>(DEFAULT_STATE);
-  const transitionTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const setTransitioning = useCallback((transitioning: boolean) => {
     setState(prev => ({ ...prev, isTransitioning: transitioning }));

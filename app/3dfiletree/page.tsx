@@ -39,7 +39,7 @@ export default function ThreeDFileTreePage() {
   const [repoUrl, setRepoUrl] = useState('https://github.com/admineral/OpenAI-Assistant-API-Chat');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [message, setMessage] = useState('');
-  const [allFiles, setAllFiles] = useState<GitHubFile[]>([]);
+  const [, setAllFiles] = useState<GitHubFile[]>([]);
   const [selectedComponent, setSelectedComponent] = useState<ComponentMetadata | null>(null);
   const [showControls, setShowControls] = useState(true);
 
@@ -239,10 +239,8 @@ export default function ThreeDFileTreePage() {
       {/* 3D Canvas */}
       <FileTree3DScene 
         components={contextComponents}
-        allFiles={allFiles}
         selectedComponent={selectedComponent}
         onSelectComponent={handleSelectComponent}
-        repoUrl={repoUrl}
       />
 
       {/* Controls Help */}

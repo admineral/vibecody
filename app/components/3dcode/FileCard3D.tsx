@@ -2,7 +2,7 @@
 
 import { useRef, useState, memo } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Text, RoundedBox, Billboard } from '@react-three/drei'
+import { Text, RoundedBox } from '@react-three/drei'
 import { Mesh, Vector3, Group } from 'three'
 import { ComponentMetadata, ComponentType } from '../../lib/types'
 import * as THREE from 'three'
@@ -169,76 +169,90 @@ const FileCard3D = memo(({
         </>
       )}
       
-      {/* Use Billboard for text to always face camera - more performant */}
-      <Billboard>
-        {/* File type icon */}
-        <Text
-          position={[0, cardHeight * 0.3, cardDepth + 0.01]}
-          fontSize={0.8}
-          anchorX="center"
-          anchorY="middle"
-        >
-          {config.icon}
-        </Text>
-        
-        {/* File name */}
-        <Text
-          position={[0, 0, cardDepth + 0.01]}
-          fontSize={0.25}
-          color={localHover || isHovered ? '#ffffff' : '#e0e0e0'}
-          anchorX="center"
-          anchorY="middle"
-          maxWidth={cardWidth * 0.8}
-          overflowWrap="break-word"
-          textAlign="center"
-        >
-          {component.name}
-        </Text>
-        
-        {/* File type label */}
-        <Text
-          position={[0, -cardHeight * 0.3, cardDepth + 0.01]}
-          fontSize={0.18}
-          color={config.color}
-          anchorX="center"
-          anchorY="middle"
-        >
-          {component.type.toUpperCase()}
-        </Text>
-        
-        {/* Connection count badges - only show on hover */}
-        {(localHover || isHovered) && (
-          <>
-            {/* Dependencies badge */}
-            {component.uses && component.uses.length > 0 && (
-              <group position={[cardWidth * 0.4, cardHeight * 0.4, cardDepth + 0.1]}>
-                <Text
-                  fontSize={0.2}
-                  color="#60a5fa"
-                  anchorX="center"
-                  anchorY="middle"
-                >
-                  ↗{component.uses.length}
-                </Text>
-              </group>
-            )}
-            
-            {/* References badge */}
-            {component.usedBy && component.usedBy.length > 0 && (
-              <group position={[-cardWidth * 0.4, cardHeight * 0.4, cardDepth + 0.1]}>
-                <Text
-                  fontSize={0.2}
-                  color="#f472b6"
-                  anchorX="center"
-                  anchorY="middle"
-                >
-                  ↙{component.usedBy.length}
-                </Text>
-              </group>
-            )}
-          </>
-        )}
-      </Billboard>
+      {/* Flat text rendered on card surface */}
+      {/* File type icon */}
+      <Text
+        position={[0, cardHeight * 0.3, cardDepth + 0.01]}
+        fontSize={0.8}
+        anchorX="center"
+        anchorY="middle"
+        depthOffset={0}
+        renderOrder={1}
+      >
+        {config.icon}
+      </Text>
+      
+      {/* File name */}
+      <Text
+        position={[0, 0, cardDepth + 0.01]}
+        fontSize={0.25}
+        color={localHover || isHovered ? '#ffffff' : '#e0e0e0'}
+        anchorX="center"
+        anchorY="middle"
+        maxWidth={cardWidth * 0.8}
+        overflowWrap="break-word"
+        textAlign="center"
+        depthOffset={0}
+        renderOrder={1}
+        strokeWidth={0}
+        fillOpacity={1}
+      >
+        {component.name}
+      </Text>
+      
+      {/* File type label */}
+      <Text
+        position={[0, -cardHeight * 0.3, cardDepth + 0.01]}
+        fontSize={0.18}
+        color={config.color}
+        anchorX="center"
+        anchorY="middle"
+        depthOffset={0}
+        renderOrder={1}
+        strokeWidth={0}
+        fillOpacity={1}
+      >
+        {component.type.toUpperCase()}
+      </Text>
+      
+      {/* Connection count badges - only show on hover */}
+      {(localHover || isHovered) && (
+        <>
+          {/* Dependencies badge */}
+          {component.uses && component.uses.length > 0 && (
+            <Text
+              position={[cardWidth * 0.4, cardHeight * 0.4, cardDepth + 0.01]}
+              fontSize={0.2}
+              color="#60a5fa"
+              anchorX="center"
+              anchorY="middle"
+              depthOffset={0}
+              renderOrder={1}
+              strokeWidth={0}
+              fillOpacity={1}
+            >
+              ↗{component.uses.length}
+            </Text>
+          )}
+          
+          {/* References badge */}
+          {component.usedBy && component.usedBy.length > 0 && (
+            <Text
+              position={[-cardWidth * 0.4, cardHeight * 0.4, cardDepth + 0.01]}
+              fontSize={0.2}
+              color="#f472b6"
+              anchorX="center"
+              anchorY="middle"
+              depthOffset={0}
+              renderOrder={1}
+              strokeWidth={0}
+              fillOpacity={1}
+            >
+              ↙{component.usedBy.length}
+            </Text>
+          )}
+        </>
+      )}
     </group>
   )
 })

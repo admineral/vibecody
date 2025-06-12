@@ -11,22 +11,27 @@ interface ModularAgentProps {
   filePositions: Record<string, Vector3>
   speed: number
   hoveredFile: string | null
+  selectedFile: string | null
+  viewMode?: 'orbital' | 'firstPerson' | 'follow' | 'cinematic'
 }
 
 // Agent behavior modes that can be extended later
-type AgentMode = 'explorer' | 'analyzer' | 'helper'
+type AgentBehavior = 'explorer' | 'analyzer' | 'helper' | 'navigating' | 'investigating'
 
 const ModularAgent = forwardRef<Group, ModularAgentProps>(({ 
   files, 
   filePositions, 
   speed = 1,
-  hoveredFile 
+  hoveredFile,
+  selectedFile,
+  viewMode = 'orbital'
 }, ref) => {
   const meshRef = useRef<Mesh>(null)
   const [path, setPath] = useState<CatmullRomCurve3 | null>(null)
   const [pathProgress, setPathProgress] = useState(0)
   const [status, setStatus] = useState<string>('Initializing...')
-  const [currentMode, setCurrentMode] = useState<AgentMode>('explorer')
+  const [currentMode, setCurrentMode] = useState<AgentBehavior>('explorer')
+  const [investigationTimer, setInvestigationTimer] = useState(0)
   
   // Agent configuration
   const config = {
@@ -43,8 +48,23 @@ const ModularAgent = forwardRef<Group, ModularAgentProps>(({
     if (positions.length === 0) return
     
     let points: Vector3[] = []
+    let isPathLooping = true
     
     switch (currentMode) {
+      case 'navigating':
+        if (selectedFile && filePositions[selectedFile]) {
+          const agent = (ref as React.RefObject<Group>)?.current
+          if (agent) {
+            const startPos = agent.position.clone()
+            // Stop in front of the card, not inside it
+            const targetPos = filePositions[selectedFile].clone().add(new Vector3(0, 0, 3))
+            points = [startPos, targetPos]
+            setStatus(`Navigating to ${selectedFile.split('/').pop()}`)
+            isPathLooping = false
+          }
+        }
+        break
+      
       case 'explorer':
         // Explore all areas systematically - reduced points
         points = positions
@@ -64,8 +84,8 @@ const ModularAgent = forwardRef<Group, ModularAgentProps>(({
         break
         
       case 'helper':
-        // Move to hovered or selected files
-        if (hoveredFile && filePositions[hoveredFile]) {
+        // Move to hovered or selected files - but only if not in follow mode
+        if (hoveredFile && filePositions[hoveredFile] && viewMode !== 'follow') {
           points = [filePositions[hoveredFile].clone()]
           setStatus(`Helping...`)
         } else {
@@ -76,44 +96,103 @@ const ModularAgent = forwardRef<Group, ModularAgentProps>(({
     }
     
     // Create smooth path through points
-    if (points.length > 2) {
-      const curve = new CatmullRomCurve3(points, true, 'catmullrom', 0.5)
+    if (points.length > 1) {
+      const curve = new CatmullRomCurve3(points, isPathLooping, 'catmullrom', 0.5)
       setPath(curve)
+      setPathProgress(0) // Reset progress for new path
+    } else {
+      setPath(null)
     }
-  }, [currentMode, files, filePositions, hoveredFile])
+  }, [currentMode, files, filePositions, hoveredFile, selectedFile, ref, viewMode])
+
+  // React to selected file
+  useEffect(() => {
+    if (selectedFile && filePositions[selectedFile]) {
+      setCurrentMode('navigating')
+    }
+  }, [selectedFile, filePositions])
 
   // Switch modes periodically or based on conditions
   useEffect(() => {
     const modeInterval = setInterval(() => {
-      if (hoveredFile) {
+      // Don't switch modes if currently navigating or investigating
+      if (currentMode === 'navigating' || currentMode === 'investigating') {
+        return
+      }
+
+      // Only switch to helper mode if not in follow mode
+      if (hoveredFile && viewMode !== 'follow') {
         setCurrentMode('helper')
       } else {
-        // Cycle through modes
-        setCurrentMode(prev => {
-          switch (prev) {
-            case 'explorer': return 'analyzer'
-            case 'analyzer': return 'helper'
-            case 'helper': return 'explorer'
-          }
-        })
+                  // Cycle through modes
+          setCurrentMode(prev => {
+            switch (prev) {
+              case 'explorer': return 'analyzer'
+              case 'analyzer': return 'helper'
+              case 'helper': return 'explorer'
+              default: return 'explorer'
+            }
+          })
       }
     }, 20000) // Increased from 15000
 
     return () => clearInterval(modeInterval)
-  }, [hoveredFile])
+  }, [hoveredFile, viewMode, currentMode])
   
   // Animate agent movement
   useFrame((state, delta) => {
-    if (!ref || typeof ref !== 'object' || !('current' in ref) || !ref.current || !path) return
+    if (!ref || typeof ref !== 'object' || !('current' in ref) || !ref.current) return
     
     const group = ref.current as Group
+
+    // Handle investigation mode
+    if (currentMode === 'investigating') {
+      if (investigationTimer > 0) {
+        setInvestigationTimer(t => t - delta)
+      } else {
+        // Resume exploring when timer finishes
+        setCurrentMode('explorer')
+      }
+      return // Halt movement
+    }
+    
+    if (!path) return
     
     // Update path progress based on speed
-    setPathProgress((prev) => (prev + delta * speed * 0.1) % 1)
+    let newProgress = pathProgress
+
+    if (currentMode === 'navigating') {
+      // Move faster when navigating to a selection
+      newProgress = pathProgress + delta * speed * 0.2
+      if (newProgress >= 1) {
+        newProgress = 1
+        setCurrentMode('investigating')
+        setInvestigationTimer(10) // Wait for 10 seconds
+        setStatus(`Inspecting ${selectedFile?.split('/').pop()}`)
+      }
+    } else {
+      newProgress = (pathProgress + delta * speed * 0.1) % 1
+    }
+    setPathProgress(newProgress)
     
     // Get position on path
     const point = path.getPoint(pathProgress)
-    group.position.lerp(point, 0.1)
+
+    // --- Collision Avoidance Logic ---
+    const avoidanceForce = new Vector3(0, 0, 0)
+    const avoidanceRadius = 3 // How far to stay away from cards
+    
+    Object.values(filePositions).forEach(cardPosition => {
+      const distance = group.position.distanceTo(cardPosition)
+      if (distance < avoidanceRadius) {
+        const repulsion = group.position.clone().sub(cardPosition).normalize()
+        const strength = (avoidanceRadius - distance) / avoidanceRadius
+        avoidanceForce.add(repulsion.multiplyScalar(strength * 0.5))
+      }
+    })
+    
+    const finalTargetPosition = point.clone().add(avoidanceForce)
+    group.position.lerp(finalTargetPosition, 0.1)
     
     // Look ahead on path
     const lookAheadProgress = (pathProgress + 0.02) % 1

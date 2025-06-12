@@ -72,7 +72,7 @@ function calculateLayerPositions(
   // Distribute components in a circle or spiral
   if (count <= 8) {
     // Circle layout for small groups
-    const radius = Math.max(5, count * 1.5)
+    const radius = Math.max(12, count * 3)
     components.forEach((comp, i) => {
       const angle = (i / count) * Math.PI * 2
       positions[comp.file] = new Vector3(
@@ -83,11 +83,11 @@ function calculateLayerPositions(
     })
   } else {
     // Spiral layout for larger groups
-    const spiralRadius = 8
-    const spiralRate = 2
+    const spiralRadius = 16
+    const spiralRate = 3
     components.forEach((comp, i) => {
       const angle = i * 0.5
-      const radius = spiralRadius + (i * spiralRate * 0.1)
+      const radius = spiralRadius + (i * spiralRate * 0.2)
       positions[comp.file] = new Vector3(
         Math.cos(angle) * radius,
         layerHeight,
@@ -106,7 +106,7 @@ function applyGravitationalClustering(
 ): void {
   const iterations = 10
   const attractionStrength = 0.2
-  const repulsionStrength = 5
+  const repulsionStrength = 12
   
   for (let iter = 0; iter < iterations; iter++) {
     const forces: Record<string, Vector3> = {}

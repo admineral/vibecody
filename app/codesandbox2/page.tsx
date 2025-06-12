@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import FileExplorer from '../components/explorer/FileExplorer';
+import FileExplorer from '../components/landingpage/explorer/FileExplorer';
 import SandpackEditor from '../components/codesandbox2/SandpackEditor';
 import { useComponentData } from '../lib/context/ComponentDataContext';
 import { ComponentMetadata } from '../lib/types';

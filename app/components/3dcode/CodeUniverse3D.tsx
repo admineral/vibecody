@@ -9,6 +9,7 @@ import FileCard3D from './FileCard3D'
 import ModularAgent from './ModularAgent'
 import FileExplorer3D from './FileExplorer3D'
 import { calculateFilePositions } from './utils/spatialLayout'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 
 interface CodeUniverse3DProps {
   components: ComponentMetadata[]
@@ -19,6 +20,10 @@ interface CodeUniverse3DProps {
   viewMode: 'orbital' | 'firstPerson' | 'follow' | 'cinematic'
 }
 
+interface SceneProps extends CodeUniverse3DProps {
+  agentRef: React.RefObject<Group | null>
+}
+
 // Main scene component
 function Scene({ 
   components, 
@@ -26,10 +31,10 @@ function Scene({
   onSelectFile, 
   agentsEnabled,
   agentSpeed,
-  viewMode 
-}: CodeUniverse3DProps) {
+  viewMode,
+  agentRef
+}: SceneProps) {
   const groupRef = useRef<Group>(null)
-  const agentRef = useRef<Group>(null)
   const { camera } = useThree()
   const [hoveredFile, setHoveredFile] = useState<string | null>(null)
   const [visibleComponents, setVisibleComponents] = useState<ComponentMetadata[]>([])
@@ -61,16 +66,6 @@ function Scene({
   useFrame((state, delta) => {
     if (groupRef.current && viewMode === 'orbital') {
       groupRef.current.rotation.y += delta * 0.02
-    }
-    
-    // Follow mode camera
-    if (viewMode === 'follow' && agentRef.current && agentsEnabled) {
-      const agentPosition = agentRef.current.position
-      const cameraOffset = new Vector3(0, 5, 10)
-      const desiredPosition = agentPosition.clone().add(cameraOffset)
-      
-      camera.position.lerp(desiredPosition, 0.1)
-      camera.lookAt(agentPosition)
     }
   })
 
@@ -114,10 +109,10 @@ function Scene({
               component={component}
               position={position}
               isSelected={selectedFile === component.file}
-              isHovered={hoveredFile === component.file}
+              isHovered={viewMode !== 'follow' && hoveredFile === component.file}
               onClick={() => onSelectFile(component.file)}
-              onPointerOver={() => setHoveredFile(component.file)}
-              onPointerOut={() => setHoveredFile(null)}
+              onPointerOver={() => viewMode !== 'follow' && setHoveredFile(component.file)}
+              onPointerOut={() => viewMode !== 'follow' && setHoveredFile(null)}
             />
           )
         })}
@@ -131,6 +126,8 @@ function Scene({
           filePositions={filePositions}
           speed={agentSpeed}
           hoveredFile={hoveredFile}
+          selectedFile={selectedFile}
+          viewMode={viewMode}
         />
       )}
       
@@ -164,10 +161,13 @@ function CameraController({ viewMode, agentsEnabled }: { viewMode: string, agent
         camera.position.set(0, 2, 10)
         break
       case 'follow':
-        // Follow mode is handled in the Scene component
+        // Initial position for follow mode
         if (!agentsEnabled) {
           camera.position.set(0, 15, 30)
           camera.lookAt(0, 0, 0)
+        } else {
+          // Set initial distance from agent
+          camera.position.set(0, 5, 10)
         }
         break
       case 'cinematic':
@@ -181,7 +181,51 @@ function CameraController({ viewMode, agentsEnabled }: { viewMode: string, agent
   return null
 }
 
+// Follow camera controls component
+function FollowCameraControls({ agentRef, enabled }: { agentRef: React.RefObject<Group | null>, enabled: boolean }) {
+  const { camera } = useThree()
+  const controlsRef = useRef<OrbitControlsImpl | null>(null)
+  
+  useFrame(() => {
+    const controls = controlsRef.current
+    const agent = agentRef.current
+
+    if (enabled && agent && controls) {
+      const offset = new Vector3()
+      // Get the camera's offset from the controls' target
+      offset.copy(camera.position).sub(controls.target)
+      
+      // The new target is the agent's position
+      const agentPosition = agent.position.clone()
+      
+      // Move the camera to follow it
+      camera.position.copy(agentPosition).add(offset)
+      
+      // Update the controls' target
+      controls.target.copy(agentPosition)
+    }
+  })
+  
+  if (!enabled) return null
+  
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enablePan={false} // Disable panning to keep focus on agent
+      enableZoom={true}
+      enableRotate={true}
+      maxDistance={50}
+      minDistance={2}
+      zoomSpeed={0.4}
+      rotateSpeed={0.8}
+      makeDefault
+    />
+  )
+}
+
 export default function CodeUniverse3D(props: CodeUniverse3DProps) {
+  const agentRef = useRef<Group>(null)
+
   return (
     <div className="relative w-full h-full">
       {/* File Explorer Overlay */}
@@ -218,8 +262,9 @@ export default function CodeUniverse3D(props: CodeUniverse3DProps) {
             enablePan={true}
             enableZoom={true}
             enableRotate={true}
-            maxDistance={80}
+            maxDistance={120}
             minDistance={5}
+            zoomSpeed={0.4}
             autoRotate={false}
             autoRotateSpeed={0.5}
             makeDefault
@@ -228,8 +273,14 @@ export default function CodeUniverse3D(props: CodeUniverse3DProps) {
         
         {/* Main scene wrapped in Suspense */}
         <Suspense fallback={null}>
-          <Scene {...props} />
+          <Scene {...props} agentRef={agentRef} />
         </Suspense>
+        
+        {/* Follow camera controls */}
+        <FollowCameraControls 
+          agentRef={agentRef}
+          enabled={props.viewMode === 'follow' && props.agentsEnabled}
+        />
         
         {/* Preload assets */}
         <Preload all />

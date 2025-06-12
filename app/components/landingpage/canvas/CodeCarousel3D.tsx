@@ -4,7 +4,7 @@ import { useRef, useState, Suspense, useMemo, useLayoutEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Text, ScrollControls, useScroll, Billboard, Html } from '@react-three/drei'
 import { Group, Mesh, Material } from 'three'
-import { ComponentMetadata } from '../../lib/types'
+import { ComponentMetadata } from '../../../lib/types'
 import { easing } from 'maath'
 import dynamic from 'next/dynamic'
 

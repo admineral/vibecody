@@ -38,7 +38,7 @@ export default function ThreeDCodePage() {
   const [isClient, setIsClient] = useState(false)
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [agentsEnabled, setAgentsEnabled] = useState(true)
-  const [agentSpeed, setAgentSpeed] = useState(1)
+  const [agentSpeed, setAgentSpeed] = useState(0.3)
   const [viewMode, setViewMode] = useState<'orbital' | 'firstPerson' | 'follow' | 'cinematic'>('orbital')
   const [components, setComponents] = useState<ComponentMetadata[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -187,7 +187,7 @@ export default function ThreeDCodePage() {
                     <input
                       type="range"
                       min="0.1"
-                      max="3"
+                      max="0.6"
                       step="0.1"
                       value={agentSpeed}
                       onChange={(e) => setAgentSpeed(parseFloat(e.target.value))}

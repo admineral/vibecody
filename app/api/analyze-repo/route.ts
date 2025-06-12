@@ -322,30 +322,41 @@ async function processRepository(
 }
 
 async function fetchFileContent(owner: string, repo: string, path: string, branch: string): Promise<string> {
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
-  
-  console.log(`🔗 Fetching: ${url}`);
-  const response = await fetch(url, {
+  // Prefer raw.githubusercontent.com to avoid GitHub REST API rate-limits
+  const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+
+  try {
+    const rawRes = await fetch(rawUrl);
+    if (rawRes.ok) {
+      console.log(`✅ Fetched (raw) ${path}`);
+      return await rawRes.text();
+    }
+  } catch (rawErr) {
+    console.warn(`⚠️  Raw fetch failed for ${path}:`, rawErr);
+  }
+
+  // Fallback to GitHub REST API (base64 encoded) – this counts towards rate-limit
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+  console.log(`🔗 Fallback API fetch: ${apiUrl}`);
+
+  const apiRes = await fetch(apiUrl, {
     headers: {
       'Accept': 'application/vnd.github.v3+json',
-      ...(process.env.GITHUB_TOKEN && {
-        'Authorization': `token ${process.env.GITHUB_TOKEN}`
-      })
+      ...(process.env.GITHUB_TOKEN && { 'Authorization': `token ${process.env.GITHUB_TOKEN}` })
     }
   });
 
-  if (!response.ok) {
-    console.log(`❌ Fetch failed: ${response.status} ${response.statusText} for ${path}`);
-    throw new Error(`Failed to fetch file content: ${response.status}`);
+  if (!apiRes.ok) {
+    console.error(`❌ API fetch failed: ${apiRes.status} ${apiRes.statusText} for ${path}`);
+    throw new Error(`Failed to fetch file content: ${apiRes.status}`);
   }
 
-  const data = await response.json();
-  
+  const data = await apiRes.json();
   if (data.content) {
-    console.log(`✅ Successfully fetched ${path} (${data.content.length} chars)`);
+    console.log(`✅ Successfully fetched (API) ${path}`);
     return Buffer.from(data.content, 'base64').toString('utf-8');
   }
-  
+
   throw new Error('No content found in file');
 }
 

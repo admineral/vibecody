@@ -549,7 +549,7 @@ export default function Home() {
       
       {/* Message bar */}
       {message && (
-        <div className="bg-blue-50 border-l-4 border-blue-600 text-blue-900 p-2 text-sm">
+        <div className="bg-blue-900 border-l-4 border-blue-400 text-blue-100 p-2 text-sm">
           {message}
         </div>
       )}

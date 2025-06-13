@@ -6,9 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "analyze:local": "tsx scripts/analyze-local.ts"
   },
   "dependencies": {
+    "@swc/core": "^1.3.100",
+    "ts-morph": "^21.0.1",
+    "tar": "^6.2.0",
+    "glob": "^10.3.10",
     "@codesandbox/sandpack-react": "^2.20.0",
     "@codesandbox/sandpack-themes": "^2.0.21",
     "@dnd-kit/core": "^6.3.1",
@@ -45,11 +50,13 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/tar": "^6.1.11",
     "@types/three": "^0.170.0",
     "babel-loader": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
     "tailwindcss": "^4",
+    "tsx": "^4.7.0",
     "tw-animate-css": "^1.3.0",
     "typescript": "^5"
   }

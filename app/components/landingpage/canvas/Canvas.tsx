@@ -27,9 +27,11 @@ const nodeTypes: NodeTypes = {
 
 // Define edge options at module level
 const defaultEdgeOptions = {
-  style: {
-    stroke: '#475569', // slate-600 for better contrast
-    strokeWidth: 1.5,
+  type: 'smoothstep',
+  animated: false,
+  style: { 
+    strokeWidth: 3, // Thicker lines as requested
+    stroke: '#6b7280' // gray-500 for better visibility on dark background
   },
   markerEnd: {
     type: MarkerType.ArrowClosed,
@@ -61,7 +63,7 @@ function CanvasControls({ onReset }: { onReset: () => void }) {
     <Panel position="top-right" className="flex gap-2">
       <button 
         onClick={onReset}
-        className="bg-white text-gray-900 text-sm py-1 px-3 rounded shadow hover:bg-gray-50 transition-colors border border-gray-300"
+        className="bg-gray-800 text-gray-200 text-sm py-1 px-3 rounded shadow hover:bg-gray-700 transition-colors border border-gray-600"
       >
         Reset Layout
       </button>
@@ -143,25 +145,25 @@ function CanvasContent({
       maxZoom={2}
       defaultViewport={defaultViewport}
       attributionPosition="bottom-right"
-      className="bg-white"
+      className="bg-gray-900"
     >
       <Background 
         variant={BackgroundVariant.Dots} 
         gap={16} 
         size={1} 
-        color="#cbd5e1" // slate-300 for better contrast
+        color="#4b5563" // gray-600 for better contrast on dark background
       />
       <Controls 
         position="bottom-right"
         showInteractive={false}
-        className="!bg-white !shadow-md !border !border-gray-200"
+        className="!bg-gray-800 !shadow-md !border !border-gray-600 [&>button]:!bg-gray-800 [&>button]:!border-gray-600 [&>button]:!text-gray-200 [&>button:hover]:!bg-gray-700"
       />
       <MiniMap 
         nodeStrokeWidth={3}
         zoomable
         pannable
-        maskColor="rgba(240, 242, 245, 0.6)" // Light mask for better daylight viewing
-        className="!border !border-gray-200"
+        maskColor="rgba(17, 24, 39, 0.6)" // Dark mask for dark theme
+        className="!border !border-gray-600 !bg-gray-800"
       />
       <CanvasControls onReset={handleResetLayout} />
     </ReactFlow>

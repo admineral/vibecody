@@ -333,7 +333,7 @@ export function useComponentGraph(initialComponents: ComponentMetadata[] = []) {
 
   // Current state of the canvas
   const canvasState: CanvasState = useMemo(() => ({
-    nodes,
+    nodes: nodes as ComponentNode[],
     edges,
     selectedNode
   }), [nodes, edges, selectedNode]);

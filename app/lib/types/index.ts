@@ -10,26 +10,35 @@ export enum ComponentType {
   CONTEXT = 'context',
 }
 
-// Metadata extracted from a component
+// Component metadata with all the info we extract
 export interface ComponentMetadata {
   name: string;
   description?: string;
   type: ComponentType;
-  uses?: string[];  // Other components this component uses
-  usedBy?: string[]; // Components that use this component
+  uses?: string[];
+  usedBy?: string[];
   props?: PropMetadata[];
-  file: string;     // Path to the component file
+  file: string;
   exports?: string[];
-  content?: string; // File content (stored during analysis)
+  content?: string;
+  isClientComponent?: boolean;
+  isServerComponent?: boolean;
+  dynamicImports?: string[];
+  metadata?: {
+    runtime?: 'nodejs' | 'edge';
+    revalidate?: number | false;
+    dynamic?: 'auto' | 'force-dynamic' | 'error' | 'force-static';
+  };
 }
 
-// Metadata for a component's props
+// Props metadata extracted from TypeScript
 export interface PropMetadata {
   name: string;
   type: string;
   required: boolean;
   description?: string;
   defaultValue?: string;
+  jsDocTags?: Record<string, string>;
 }
 
 // A node in our component graph
@@ -63,8 +72,8 @@ export interface FileItem {
 
 // For canvas state management
 export interface CanvasState {
-  nodes: Node[];
-  edges: Edge[];
+  nodes: ComponentNode[];
+  edges: ComponentEdge[];
   selectedNode: string | null;
 }
 

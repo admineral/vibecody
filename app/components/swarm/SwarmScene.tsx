@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useMemo, useRef } from 'react'
+import { Suspense, useMemo, useRef, type MutableRefObject } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { AdaptiveDpr, Sky, Stars } from '@react-three/drei'
 import { Group, PCFShadowMap } from 'three'
@@ -20,23 +20,43 @@ interface SwarmSceneProps {
   followId: string | null
   selectedBuildingId: string | null
   portrait?: boolean
+  resetNonce?: number
+  eventSource?: MutableRefObject<HTMLElement | null>
   onSelectBuilding: (id: string) => void
   onSelectAgent: (id: string) => void
 }
 
 function Environment({ theme, portrait }: { theme: VersionTheme; portrait?: boolean }) {
+  const daylight = theme.id === 'daylight'
+  const neon = theme.id === 'neon' || theme.id === 'hive'
   return (
     <>
       <color attach="background" args={[theme.background]} />
-      <fog attach="fog" args={[theme.fog, theme.chipMode ? 16 : portrait ? 10 : theme.fogNear, theme.chipMode ? 56 : portrait ? 42 : theme.fogFar]} />
+      <fog
+        attach="fog"
+        args={[
+          theme.fog,
+          theme.chipMode ? 16 : portrait ? 14 : theme.fogNear,
+          theme.chipMode ? 56 : portrait ? 58 : theme.fogFar,
+        ]}
+      />
+      <hemisphereLight
+        args={
+          daylight
+            ? ['#dbeafe', '#4d7c0f', 0.55]
+            : neon
+              ? ['#6d28d9', '#020617', 0.32]
+              : ['#94a3b8', '#020617', 0.22]
+        }
+      />
       <ambientLight intensity={theme.ambient} />
       <directionalLight
         position={theme.sun}
         intensity={theme.sunIntensity}
         color={theme.sunColor}
-        castShadow={theme.id === 'daylight'}
+        castShadow={false}
       />
-      <pointLight position={[0, 10, 0]} intensity={theme.id === 'hive' ? 1.2 : 0.35} color={theme.sunColor} />
+      <pointLight position={[0, 10, 0]} intensity={theme.id === 'hive' ? 1.2 : neon ? 0.55 : 0.35} color={theme.sunColor} />
       {theme.stars && (
         <Stars radius={70} depth={30} count={theme.nodeMode ? 900 : 500} factor={2.4} saturation={0} fade speed={0.35} />
       )}
@@ -44,9 +64,9 @@ function Environment({ theme, portrait }: { theme: VersionTheme; portrait?: bool
         <Sky distance={450000} sunPosition={[1, 1, 0]} inclination={0.49} azimuth={0.25} />
       )}
       {!theme.nodeMode && !theme.floatIslands && !theme.chipMode && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow>
-          <planeGeometry args={[120, 120]} />
-          <meshStandardMaterial color={theme.ground} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
+          <planeGeometry args={[140, 140]} />
+          <meshStandardMaterial color={daylight ? '#86efac' : theme.ground} roughness={0.92} />
         </mesh>
       )}
     </>
@@ -63,7 +83,9 @@ function SceneBody({
   onSelectBuilding,
   onSelectAgent,
   portrait = true,
-}: SwarmSceneProps) {
+  resetNonce = 0,
+  homePosition,
+}: SwarmSceneProps & { homePosition: [number, number, number] }) {
   const groupRefs = useRef<Record<string, Group | null>>({})
 
   return (
@@ -97,7 +119,15 @@ function SceneBody({
       {!theme.chipMode && (
         <ActivityTrails trails={snapshot.trails} theme={theme} now={snapshot.time} />
       )}
-      <CameraRig mode={cameraMode} followId={followId} groupRefs={groupRefs} portrait={portrait} chipMode={theme.chipMode} />
+      <CameraRig
+        mode={cameraMode}
+        followId={followId}
+        groupRefs={groupRefs}
+        portrait={portrait}
+        chipMode={theme.chipMode}
+        homePosition={homePosition}
+        resetNonce={resetNonce}
+      />
     </>
   )
 }
@@ -108,19 +138,21 @@ export default function SwarmScene(props: SwarmSceneProps) {
     if (props.portrait) {
       if (props.theme.nodeMode) return [0, 12, 14]
       if (props.theme.hivePull) return [5, 11, 8]
-      return [8, 14, 10]
+      return [11, 10, 13]
     }
     if (props.theme.nodeMode) return [0, 14, 22]
     if (props.theme.hivePull) return [8, 10, 12]
     if (props.theme.floatIslands) return [16, 18, 20]
-    return [18, 14, 18]
+    return [18, 12, 16]
   }, [props.theme, props.portrait])
 
   return (
     <Canvas
-      camera={{ position: cameraPosition, fov: props.theme.chipMode ? 62 : props.portrait ? 72 : 55, near: 0.1, far: 160 }}
+      camera={{ position: cameraPosition, fov: props.theme.chipMode ? 62 : props.portrait ? 68 : 52, near: 0.1, far: 180 }}
       dpr={[1, 1.25]}
       shadows={false}
+      eventSource={(props.eventSource as MutableRefObject<HTMLElement> | undefined) ?? undefined}
+      eventPrefix="client"
       onCreated={({ gl }) => {
         gl.shadowMap.type = PCFShadowMap
       }}
@@ -130,11 +162,11 @@ export default function SwarmScene(props: SwarmSceneProps) {
         alpha: false,
         stencil: false,
       }}
-      style={{ width: '100%', height: '100%', touchAction: 'none' }}
+      style={{ width: '100%', height: '100%', touchAction: 'none', pointerEvents: props.eventSource ? 'none' : 'auto' }}
     >
       <AdaptiveDpr pixelated />
       <Suspense fallback={null}>
-        <SceneBody {...props} />
+        <SceneBody {...props} homePosition={cameraPosition} />
       </Suspense>
     </Canvas>
   )

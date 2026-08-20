@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, type PointerEvent } from 'react'
 import Link from 'next/link'
 import {
   ChevronLeft,
+  Eye,
+  Film,
+  Orbit,
   Pause,
   Play,
   RotateCcw,
@@ -34,7 +37,18 @@ interface MobileHUDProps {
   onPlaying: (playing: boolean) => void
   onSpeed: (speed: number) => void
   onRestart: () => void
+  onResetView: () => void
 }
+
+function trapPointer(event: PointerEvent) {
+  event.stopPropagation()
+}
+
+const CAMERA_MODES: { id: CameraMode; label: string; icon: typeof Orbit }[] = [
+  { id: 'orbit', label: 'Look', icon: Orbit },
+  { id: 'follow', label: 'Follow', icon: Eye },
+  { id: 'cinematic', label: 'Fly', icon: Film },
+]
 
 export default function MobileHUD({
   snapshot,
@@ -52,8 +66,10 @@ export default function MobileHUD({
   onPlaying,
   onSpeed,
   onRestart,
+  onResetView,
 }: MobileHUDProps) {
   const [sheet, setSheet] = useState<Sheet>('none')
+  const [hint, setHint] = useState(true)
   const activeAgent = snapshot.agents.find((a) => a.id === (followId ?? snapshot.activeStep?.agent))
   const mission = MISSIONS.find((m) => m.id === missionId)
   const missionIndex = Math.max(0, MISSIONS.findIndex((m) => m.id === missionId))
@@ -61,12 +77,20 @@ export default function MobileHUD({
   const followed = agents.find((a) => a.id === followId) ?? agents.find((a) => a.id === activeAgent?.id)
   const latestTool = snapshot.log.find((line) => line.startsWith('[dev]'))
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setHint(false), 5200)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   return (
     <div className="pointer-events-none absolute inset-0 z-10">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/55 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/70 to-transparent" />
 
-      <div className="absolute inset-x-0 top-0 px-3 pt-[max(0.5rem,env(safe-area-inset-top))]">
+      <div
+        className="absolute inset-x-0 top-0 px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
+        onPointerDown={trapPointer}
+      >
         <div className="mb-2 flex gap-1">
           {MISSIONS.map((item, i) => (
             <button
@@ -109,7 +133,42 @@ export default function MobileHUD({
         </div>
       </div>
 
-      <div className="absolute top-[max(5.5rem,calc(env(safe-area-inset-top)+4.5rem))] right-2 flex flex-col items-center gap-2">
+      <div
+        className="absolute top-[max(5.5rem,calc(env(safe-area-inset-top)+4.5rem))] left-2 flex flex-col gap-2"
+        onPointerDown={trapPointer}
+      >
+        {CAMERA_MODES.map((item) => {
+          const Icon = item.icon
+          const active = cameraMode === item.id
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onCamera(item.id)}
+              className={`pointer-events-auto flex h-11 w-11 flex-col items-center justify-center rounded-full text-white shadow-[0_0_16px_rgba(0,0,0,0.45)] backdrop-blur-md ${
+                active ? 'bg-fuchsia-500' : 'bg-black/45'
+              }`}
+              aria-label={item.label}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="text-[8px] font-medium leading-none">{item.label}</span>
+            </button>
+          )
+        })}
+        <button
+          type="button"
+          onClick={onResetView}
+          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md"
+          aria-label="Reset view"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div
+        className="absolute top-[max(5.5rem,calc(env(safe-area-inset-top)+4.5rem))] right-2 flex flex-col items-center gap-2"
+        onPointerDown={trapPointer}
+      >
         {agents.map((agent) => {
           const active = followId === agent.id
           return (
@@ -154,7 +213,12 @@ export default function MobileHUD({
       </div>
 
       <div className="absolute inset-x-0 bottom-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pr-16">
-        <div className="pointer-events-auto max-w-[78%]">
+        {hint && (
+          <p className="pointer-events-none mb-2 max-w-[78%] rounded-full bg-black/55 px-3 py-1.5 text-[11px] text-white backdrop-blur-md">
+            Drag to look around · pinch to zoom
+          </p>
+        )}
+        <div className="pointer-events-auto max-w-[78%]" onPointerDown={trapPointer}>
           <p className="text-sm font-semibold text-white">
             @{followed?.name ?? 'Swarm'}
             <span className="ml-2 text-[11px] font-normal text-white/60">{followed?.version}</span>
@@ -165,14 +229,11 @@ export default function MobileHUD({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] hidden justify-center landscape:flex md:hidden">
-        <p className="rounded-full bg-black/55 px-3 py-1.5 text-[11px] text-white backdrop-blur-md">
-          Hochkant · rotate your phone
-        </p>
-      </div>
-
       {sheet !== 'none' && (
-        <div className="pointer-events-auto absolute inset-0 z-20 flex flex-col justify-end">
+        <div
+          className="pointer-events-auto absolute inset-0 z-20 flex flex-col justify-end"
+          onPointerDown={trapPointer}
+        >
           <button
             type="button"
             className="absolute inset-0 bg-black/45"
@@ -252,27 +313,25 @@ export default function MobileHUD({
                 </section>
 
                 <section className="flex items-center gap-2">
-                  {(['orbit', 'follow', 'cinematic'] as CameraMode[]).map((mode) => {
+                  {CAMERA_MODES.map((item) => {
                     const label = theme.chipMode
-                      ? mode === 'orbit'
+                      ? item.id === 'orbit'
                         ? 'sat'
-                        : mode === 'follow'
+                        : item.id === 'follow'
                           ? 'e−'
                           : 'super'
-                      : mode === 'cinematic'
-                        ? 'fly'
-                        : mode
+                      : item.label
                     return (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => onCamera(mode)}
-                      className={`rounded-full px-3 py-1.5 text-xs capitalize ${
-                        cameraMode === mode ? 'bg-fuchsia-500' : 'bg-white/10'
-                      }`}
-                    >
-                      {label}
-                    </button>
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => onCamera(item.id)}
+                        className={`rounded-full px-3 py-1.5 text-xs capitalize ${
+                          cameraMode === item.id ? 'bg-fuchsia-500' : 'bg-white/10'
+                        }`}
+                      >
+                        {label}
+                      </button>
                     )
                   })}
                   <button

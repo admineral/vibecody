@@ -115,5 +115,5 @@ export function buildingWorldPosition(building: BuildingDef): [number, number, n
 }
 
 export function heightFromLines(lines: number) {
-  return Math.max(0.7, lines / 70)
+  return Math.max(1.15, lines / 46)
 }

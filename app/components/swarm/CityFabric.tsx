@@ -49,7 +49,7 @@ export default function CityFabric({ buildings, theme, facades }: CityFabricProp
   const treeMesh = useRef<InstancedMesh>(null)
 
   const daylight = theme.id === 'daylight'
-  const neon = theme.id === 'neon' || theme.id === 'hive'
+  const neon = theme.id === 'neon' || theme.id === 'hive' || theme.id === 'repo'
   const showGround = !theme.floatIslands && !theme.nodeMode && !theme.chipMode
   const showSkyline = showGround && !theme.hivePull
 
@@ -193,7 +193,7 @@ export default function CityFabric({ buildings, theme, facades }: CityFabricProp
             map={facades.filler.map}
             emissiveMap={facades.filler.emissiveMap}
             emissive="#f8fafc"
-            emissiveIntensity={daylight ? 0.08 : 0.42}
+            emissiveIntensity={daylight ? 0.08 : 0.58}
             metalness={neon ? 0.38 : 0.1}
             roughness={0.44}
           />
@@ -208,7 +208,7 @@ export default function CityFabric({ buildings, theme, facades }: CityFabricProp
             emissiveMap={facades.filler.emissiveMap}
             color="#64748b"
             emissive="#e2e8f0"
-            emissiveIntensity={daylight ? 0.05 : 0.28}
+            emissiveIntensity={daylight ? 0.05 : 0.4}
             metalness={0.2}
             roughness={0.5}
           />

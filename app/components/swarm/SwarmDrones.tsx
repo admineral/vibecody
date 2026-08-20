@@ -6,6 +6,7 @@ import { Text, Trail } from '@react-three/drei'
 import { Group, Vector3 } from 'three'
 import type { AgentDef, AgentRuntime, BuildingState, VersionTheme } from '@/app/lib/swarm/types'
 import { themedBuildingPosition } from '@/app/lib/swarm/cityLayout'
+import AgentEnergy from './AgentEnergy'
 
 interface SwarmDronesProps {
   agents: AgentDef[]
@@ -15,6 +16,7 @@ interface SwarmDronesProps {
   followId: string | null
   groupRefs: MutableRefObject<Record<string, Group | null>>
   compact?: boolean
+  hd?: boolean
   onSelect: (id: string) => void
 }
 
@@ -26,6 +28,7 @@ function Drone({
   highlighted,
   compact,
   groupRefs,
+  hd,
   onSelect,
 }: {
   def: AgentDef
@@ -35,6 +38,7 @@ function Drone({
   highlighted: boolean
   compact?: boolean
   groupRefs: MutableRefObject<Record<string, Group | null>>
+  hd?: boolean
   onSelect: () => void
 }) {
   const group = useRef<Group>(null)
@@ -50,6 +54,8 @@ function Drone({
       const [x, y, z] = themedBuildingPosition(building, theme)
       if (theme.chipMode) {
         target.current.set(x, 0.52, z)
+      } else if (theme.cardMode) {
+        target.current.set(x, y + (building.beingWorked ? 3.5 : 2.4), z)
       } else {
         target.current.set(x, y + building.height * building.growth + 2.3, z)
       }
@@ -122,6 +128,7 @@ function Drone({
           <meshBasicMaterial color={def.color} transparent opacity={0.35} />
         </mesh>
       )}
+      <AgentEnergy color={def.color} kind={runtime?.kind ?? 'idle'} active={Boolean(runtime?.beam)} hd={hd} />
       {(!compact || highlighted) && (
         <Text position={[0, size + 0.32, 0]} fontSize={0.18} color={def.color} anchorX="center">
           {def.glyph}
@@ -139,6 +146,7 @@ export default function SwarmDrones({
   followId,
   groupRefs,
   compact,
+  hd,
   onSelect,
 }: SwarmDronesProps) {
   return (
@@ -152,6 +160,7 @@ export default function SwarmDrones({
           theme={theme}
           highlighted={followId === def.id}
           compact={compact}
+          hd={hd}
           groupRefs={groupRefs}
           onSelect={() => onSelect(def.id)}
         />

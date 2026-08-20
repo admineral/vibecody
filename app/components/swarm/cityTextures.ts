@@ -68,7 +68,7 @@ function makeFacade(body: string, theme: VersionTheme, kind: string): Facade {
     for (let col = 0; col < cols; col += 1) {
       const x = padX + col * (winW + gapX)
       const y = padY + row * (winH + gapY)
-      const lit = rand() > (daylight ? 0.58 : 0.3)
+      const lit = rand() > (daylight ? 0.58 : 0.18)
       const accent = rand()
       const litColor = daylight
         ? '#fde68a'
@@ -77,7 +77,7 @@ function makeFacade(body: string, theme: VersionTheme, kind: string): Facade {
           : accent > 0.4
             ? '#67e8f9'
             : '#fde047'
-      const darkColor = daylight ? '#64748b' : '#020617'
+      const darkColor = daylight ? '#64748b' : '#1e293b'
       ctx.fillStyle = daylight ? '#e2e8f0' : '#0b1220'
       ctx.fillRect(x - 1, y - 1, winW + 2, winH + 2)
       ctx.fillStyle = lit ? litColor : darkColor
@@ -115,7 +115,7 @@ export function createFacadeLibrary(theme: VersionTheme): FacadeLibrary {
     byKind[kind] = facade
     all.push(facade)
   }
-  const filler = makeFacade(theme.id === 'daylight' ? '#94a3b8' : '#334155', theme, 'filler')
+  const filler = makeFacade(theme.id === 'daylight' ? '#94a3b8' : '#64748b', theme, 'filler')
   all.push(filler)
   return {
     byKind,

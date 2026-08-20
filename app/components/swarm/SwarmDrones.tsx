@@ -14,6 +14,7 @@ interface SwarmDronesProps {
   theme: VersionTheme
   followId: string | null
   groupRefs: MutableRefObject<Record<string, Group | null>>
+  compact?: boolean
   onSelect: (id: string) => void
 }
 
@@ -23,6 +24,7 @@ function Drone({
   buildings,
   theme,
   highlighted,
+  compact,
   groupRefs,
   onSelect,
 }: {
@@ -31,6 +33,7 @@ function Drone({
   buildings: BuildingState[]
   theme: VersionTheme
   highlighted: boolean
+  compact?: boolean
   groupRefs: MutableRefObject<Record<string, Group | null>>
   onSelect: () => void
 }) {
@@ -105,9 +108,11 @@ function Drone({
           <meshBasicMaterial color={def.color} transparent opacity={0.35} />
         </mesh>
       )}
-      <Text position={[0, size + 0.38, 0]} fontSize={0.22} color={def.color} anchorX="center">
-        {def.glyph} {def.name}
-      </Text>
+      {(!compact || highlighted) && (
+        <Text position={[0, size + 0.32, 0]} fontSize={0.18} color={def.color} anchorX="center">
+          {def.glyph}
+        </Text>
+      )}
     </group>
   )
 }
@@ -119,6 +124,7 @@ export default function SwarmDrones({
   theme,
   followId,
   groupRefs,
+  compact,
   onSelect,
 }: SwarmDronesProps) {
   return (
@@ -131,6 +137,7 @@ export default function SwarmDrones({
           buildings={buildings}
           theme={theme}
           highlighted={followId === def.id}
+          compact={compact}
           groupRefs={groupRefs}
           onSelect={() => onSelect(def.id)}
         />

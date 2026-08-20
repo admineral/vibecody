@@ -8,14 +8,20 @@ interface CodeSlabsProps {
   slabs: CodeSlabState[]
   buildings: BuildingState[]
   theme: VersionTheme
+  compact?: boolean
+  selectedId: string | null
 }
 
-export default function CodeSlabs({ slabs, buildings, theme }: CodeSlabsProps) {
+export default function CodeSlabs({ slabs, buildings, theme, compact, selectedId }: CodeSlabsProps) {
   if (theme.nodeMode) return null
+
+  const visible = compact
+    ? slabs.filter((s) => s.visible && s.buildingId === selectedId).slice(0, 1)
+    : slabs.filter((s) => s.visible)
 
   return (
     <group>
-      {slabs.filter((s) => s.visible).map((slab) => {
+      {visible.map((slab) => {
         const building = buildings.find((b) => b.id === slab.buildingId)
         if (!building || !building.spawned) return null
         const [x, y, z] = themedBuildingPosition(building, theme)

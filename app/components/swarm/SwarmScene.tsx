@@ -18,15 +18,16 @@ interface SwarmSceneProps {
   cameraMode: CameraMode
   followId: string | null
   selectedBuildingId: string | null
+  portrait?: boolean
   onSelectBuilding: (id: string) => void
   onSelectAgent: (id: string) => void
 }
 
-function Environment({ theme }: { theme: VersionTheme }) {
+function Environment({ theme, portrait }: { theme: VersionTheme; portrait?: boolean }) {
   return (
     <>
       <color attach="background" args={[theme.background]} />
-      <fog attach="fog" args={[theme.fog, theme.fogNear, theme.fogFar]} />
+      <fog attach="fog" args={[theme.fog, portrait ? 10 : theme.fogNear, portrait ? 42 : theme.fogFar]} />
       <ambientLight intensity={theme.ambient} />
       <directionalLight
         position={theme.sun}
@@ -36,7 +37,7 @@ function Environment({ theme }: { theme: VersionTheme }) {
       />
       <pointLight position={[0, 10, 0]} intensity={theme.id === 'hive' ? 1.2 : 0.35} color={theme.sunColor} />
       {theme.stars && (
-        <Stars radius={90} depth={40} count={theme.nodeMode ? 2800 : 1400} factor={3} saturation={0} fade speed={0.4} />
+        <Stars radius={70} depth={30} count={theme.nodeMode ? 900 : 500} factor={2.4} saturation={0} fade speed={0.35} />
       )}
       {theme.sky && (
         <Sky distance={450000} sunPosition={[1, 1, 0]} inclination={0.49} azimuth={0.25} />
@@ -60,16 +61,18 @@ function SceneBody({
   selectedBuildingId,
   onSelectBuilding,
   onSelectAgent,
+  portrait = true,
 }: SwarmSceneProps) {
   const groupRefs = useRef<Record<string, Group | null>>({})
 
   return (
     <>
-      <Environment theme={theme} />
+      <Environment theme={theme} portrait={portrait} />
       <CodeCity
         buildings={snapshot.buildings}
         theme={theme}
         selectedId={selectedBuildingId}
+        compact={portrait}
         onSelect={onSelectBuilding}
       />
       <SwarmDrones
@@ -79,28 +82,40 @@ function SceneBody({
         theme={theme}
         followId={followId}
         groupRefs={groupRefs}
+        compact={portrait}
         onSelect={onSelectAgent}
       />
-      <CodeSlabs slabs={snapshot.slabs} buildings={snapshot.buildings} theme={theme} />
+      <CodeSlabs
+        slabs={snapshot.slabs}
+        buildings={snapshot.buildings}
+        theme={theme}
+        compact={portrait}
+        selectedId={selectedBuildingId}
+      />
       <ActivityTrails trails={snapshot.trails} theme={theme} now={snapshot.time} />
-      <CameraRig mode={cameraMode} followId={followId} groupRefs={groupRefs} />
+      <CameraRig mode={cameraMode} followId={followId} groupRefs={groupRefs} portrait={portrait} />
     </>
   )
 }
 
 export default function SwarmScene(props: SwarmSceneProps) {
   const cameraPosition = useMemo<[number, number, number]>(() => {
+    if (props.portrait) {
+      if (props.theme.nodeMode) return [0, 12, 14]
+      if (props.theme.hivePull) return [5, 11, 8]
+      return [8, 14, 10]
+    }
     if (props.theme.nodeMode) return [0, 14, 22]
     if (props.theme.hivePull) return [8, 10, 12]
     if (props.theme.floatIslands) return [16, 18, 20]
     return [18, 14, 18]
-  }, [props.theme])
+  }, [props.theme, props.portrait])
 
   return (
     <Canvas
-      camera={{ position: cameraPosition, fov: 55, near: 0.1, far: 200 }}
-      dpr={[1, 1.5]}
-      shadows={props.theme.id === 'daylight'}
+      camera={{ position: cameraPosition, fov: props.portrait ? 72 : 55, near: 0.1, far: 160 }}
+      dpr={[1, 1.25]}
+      shadows={false}
       onCreated={({ gl }) => {
         gl.shadowMap.type = PCFShadowMap
       }}

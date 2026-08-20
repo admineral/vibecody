@@ -10,6 +10,7 @@ interface CodeCityProps {
   buildings: BuildingState[]
   theme: VersionTheme
   selectedId: string | null
+  compact?: boolean
   onSelect: (id: string) => void
 }
 
@@ -17,11 +18,13 @@ function BuildingMesh({
   building,
   theme,
   selected,
+  compact,
   onSelect,
 }: {
   building: BuildingState
   theme: VersionTheme
   selected: boolean
+  compact?: boolean
   onSelect: () => void
 }) {
   const [x, y, z] = themedBuildingPosition(building, theme)
@@ -73,7 +76,7 @@ function BuildingMesh({
           opacity={0.35 + building.growth * 0.65}
         />
       </mesh>
-      {Array.from({ length: Math.min(2, Math.max(0, Math.floor(height))) }).map((_, i) => (
+      {Array.from({ length: compact ? 0 : Math.min(2, Math.max(0, Math.floor(height))) }).map((_, i) => (
         <mesh key={i} position={[0.48, 0.28 + i * 0.42, 0.28]}>
           <boxGeometry args={[0.06, 0.14, 0.14]} />
           <meshStandardMaterial
@@ -83,20 +86,22 @@ function BuildingMesh({
           />
         </mesh>
       ))}
-      <Text
-        position={[0, height + 0.22, 0]}
-        fontSize={0.16}
-        color={selected ? '#ffffff' : '#cbd5e1'}
-        anchorX="center"
-        anchorY="bottom"
-      >
-        {building.name}
-      </Text>
+      {(!compact || selected) && (
+        <Text
+          position={[0, height + 0.22, 0]}
+          fontSize={selected ? 0.2 : 0.16}
+          color={selected ? '#ffffff' : '#cbd5e1'}
+          anchorX="center"
+          anchorY="bottom"
+        >
+          {building.name}
+        </Text>
+      )}
     </group>
   )
 }
 
-export default function CodeCity({ buildings, theme, selectedId, onSelect }: CodeCityProps) {
+export default function CodeCity({ buildings, theme, selectedId, compact, onSelect }: CodeCityProps) {
   const visible = useMemo(
     () => buildings.filter((b) => b.spawned),
     [buildings],
@@ -119,14 +124,16 @@ export default function CodeCity({ buildings, theme, selectedId, onSelect }: Cod
                 opacity={theme.floatIslands ? 0.85 : 0.95}
               />
             </mesh>
-            <Text
-              position={[0, theme.floatIslands ? 0.4 : 0.18, district.size[1] / 2 - 0.4]}
-              fontSize={0.32}
-              color={theme.id === 'daylight' ? '#0f172a' : district.neon}
-              anchorX="center"
-            >
-              {district.name}
-            </Text>
+            {!compact && (
+              <Text
+                position={[0, theme.floatIslands ? 0.4 : 0.18, district.size[1] / 2 - 0.4]}
+                fontSize={0.32}
+                color={theme.id === 'daylight' ? '#0f172a' : district.neon}
+                anchorX="center"
+              >
+                {district.name}
+              </Text>
+            )}
           </group>
         )
       })}
@@ -150,6 +157,7 @@ export default function CodeCity({ buildings, theme, selectedId, onSelect }: Cod
           building={building}
           theme={theme}
           selected={selectedId === building.id}
+          compact={compact}
           onSelect={() => onSelect(building.id)}
         />
       ))}

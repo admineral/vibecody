@@ -21,11 +21,10 @@ const SwarmScene = dynamic(() => import('./SwarmScene'), {
 export default function SwarmGame() {
   const [versionId, setVersionId] = useState<SwarmVersionId>('neon')
   const [missionId, setMissionId] = useState('auth-leak')
-  const [cameraMode, setCameraMode] = useState<CameraMode>('cinematic')
+  const [cameraMode, setCameraMode] = useState<CameraMode>('follow')
   const [followId, setFollowId] = useState<string | null>('lead')
   const [playing, setPlaying] = useState(true)
   const [speed, setSpeed] = useState(1)
-  const [showLog, setShowLog] = useState(true)
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null)
 
   const { snapshot, restart, agents } = useSwarmEngine(missionId, speed, playing)
@@ -34,19 +33,6 @@ export default function SwarmGame() {
   const handleFollow = (id: string | null) => {
     setFollowId(id)
     if (id) setCameraMode('follow')
-  }
-
-  const handleSelectBuilding = (id: string) => {
-    setSelectedBuildingId(id)
-  }
-
-  const handleSelectAgent = (id: string) => {
-    handleFollow(id)
-  }
-
-  const handleMission = (id: string) => {
-    setMissionId(id)
-    setShowLog(true)
   }
 
   return (
@@ -58,8 +44,9 @@ export default function SwarmGame() {
         cameraMode={cameraMode}
         followId={followId}
         selectedBuildingId={selectedBuildingId}
-        onSelectBuilding={handleSelectBuilding}
-        onSelectAgent={handleSelectAgent}
+        portrait
+        onSelectBuilding={setSelectedBuildingId}
+        onSelectAgent={handleFollow}
       />
       <MobileHUD
         snapshot={snapshot}
@@ -70,15 +57,13 @@ export default function SwarmGame() {
         followId={followId}
         playing={playing}
         speed={speed}
-        showLog={showLog}
         onVersion={setVersionId}
-        onMission={handleMission}
+        onMission={setMissionId}
         onCamera={setCameraMode}
         onFollow={handleFollow}
         onPlaying={setPlaying}
         onSpeed={setSpeed}
         onRestart={() => restart(missionId)}
-        onToggleLog={() => setShowLog((v) => !v)}
       />
     </div>
   )

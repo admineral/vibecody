@@ -24,11 +24,11 @@ function paintCard(title: string, code: string, accent: string, hot: boolean, hd
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas
 
-  ctx.fillStyle = hot ? '#14061f' : '#070b16'
+  ctx.fillStyle = hot ? '#fff7ed' : '#f8fafc'
   ctx.fillRect(0, 0, width, height)
   ctx.fillStyle = accent
   ctx.fillRect(0, 0, width, hd ? 46 : 36)
-  ctx.fillStyle = '#020617'
+  ctx.fillStyle = '#ffffff'
   ctx.font = `bold ${hd ? 22 : 16}px ui-monospace, SFMono-Regular, Menlo, monospace`
   ctx.fillText(title.slice(0, 28), 14, hd ? 30 : 24)
 
@@ -36,11 +36,11 @@ function paintCard(title: string, code: string, accent: string, hot: boolean, hd
   ctx.font = `${hd ? 15 : 12}px ui-monospace, SFMono-Regular, Menlo, monospace`
   lines.forEach((line, index) => {
     const y = (hd ? 72 : 56) + index * (hd ? 26 : 24)
-    let color = '#cbd5e1'
+    let color = '#0f172a'
     if (/^\s*\/\//.test(line) || /^\s*\*/.test(line)) color = '#64748b'
-    else if (/export|function|return|const|await|async|class/.test(line)) color = '#c4b5fd'
-    else if (/['"`]/.test(line)) color = '#86efac'
-    else if (/[{}();]/.test(line)) color = '#7dd3fc'
+    else if (/export|function|return|const|await|async|class/.test(line)) color = '#6d28d9'
+    else if (/['"`]/.test(line)) color = '#047857'
+    else if (/[{}();]/.test(line)) color = '#0369a1'
     ctx.fillStyle = color
     ctx.fillText(line.slice(0, hd ? 42 : 32), 14, y)
   })
@@ -124,7 +124,7 @@ export default function SwarmCodeCard({ building, theme, selected, hd, onSelect 
             color={texture ? '#ffffff' : '#0f172a'}
             emissive={accent}
             emissiveMap={texture ?? undefined}
-            emissiveIntensity={hot ? 0.55 : 0.22}
+            emissiveIntensity={hot ? 0.28 : 0.06}
             metalness={0.2}
             roughness={0.32}
             transparent={building.growth < 1}

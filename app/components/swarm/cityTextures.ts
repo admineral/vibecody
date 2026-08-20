@@ -43,8 +43,8 @@ function makeFacade(body: string, theme: VersionTheme, kind: string): Facade {
     return { map: new CanvasTexture(mapCanvas), emissiveMap: new CanvasTexture(emitCanvas) }
   }
 
-  const daylight = theme.id === 'daylight'
-  const neon = theme.id === 'neon' || theme.id === 'hive'
+  const daylight = true
+  const neon = theme.id === 'neon' || theme.id === 'hive' || theme.id === 'repo'
   ctx.fillStyle = body
   ctx.fillRect(0, 0, width, height)
   emit.fillStyle = '#000000'
@@ -115,7 +115,7 @@ export function createFacadeLibrary(theme: VersionTheme): FacadeLibrary {
     byKind[kind] = facade
     all.push(facade)
   }
-  const filler = makeFacade(theme.id === 'daylight' ? '#94a3b8' : '#64748b', theme, 'filler')
+  const filler = makeFacade('#94a3b8', theme, 'filler')
   all.push(filler)
   return {
     byKind,

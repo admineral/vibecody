@@ -74,22 +74,22 @@ export default function ChipFabric({ buildings, theme }: ChipFabricProps) {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.28, 1]}>
         <circleGeometry args={[26, 48]} />
-        <meshStandardMaterial color="#14352c" metalness={0.45} roughness={0.55} />
+          <meshStandardMaterial color="#4ade80" metalness={0.35} roughness={0.5} />
       </mesh>
       <mesh position={[0, -0.08, 1]}>
         <boxGeometry args={[38, 0.16, 34]} />
-        <meshStandardMaterial color="#0c241c" metalness={0.35} roughness={0.5} />
+          <meshStandardMaterial color="#86efac" metalness={0.3} roughness={0.48} />
       </mesh>
       {[-16, -8, 0, 8, 16].map((x) => (
         <mesh key={`fill-x-${x}`} position={[x, 0.02, 1]}>
           <boxGeometry args={[0.04, 0.02, 32]} />
-          <meshStandardMaterial color="#1f4a3c" />
+          <meshStandardMaterial color="#34d399" />
         </mesh>
       ))}
       {[-12, -4, 4, 12].map((z) => (
         <mesh key={`fill-z-${z}`} position={[0, 0.02, z]}>
           <boxGeometry args={[36, 0.02, 0.04]} />
-          <meshStandardMaterial color="#1f4a3c" />
+          <meshStandardMaterial color="#34d399" />
         </mesh>
       ))}
 

@@ -93,17 +93,16 @@ function CityBuilding({
   const [fw, fd] = buildingFootprint(building.kind, building.id)
   const color = building.hasBug ? '#ef4444' : selected ? '#f0abfc' : building.color
   const neon = theme.id === 'neon' || theme.id === 'hive' || theme.id === 'repo'
-  const daylight = theme.id === 'daylight'
   const podiumH = Math.min(0.42, height * 0.16)
   const roofH = 0.12
   const towerH = Math.max(0.28, height - podiumH - roofH)
-  const emissiveIntensity = building.hasBug ? 0.95 : building.beingWorked ? 0.85 : neon ? 0.72 : daylight ? 0.12 : 0.55
+  const emissiveIntensity = building.hasBug ? 0.45 : building.beingWorked ? 0.35 : 0.12
 
   return (
     <group position={[x, y, z]} scale={[1, building.growth, 1]}>
       <mesh position={[0, podiumH / 2, 0]} onClick={(e) => { e.stopPropagation(); onSelect() }}>
         <boxGeometry args={[fw * 1.14, podiumH, fd * 1.14]} />
-        <meshStandardMaterial color={daylight ? '#cbd5e1' : '#0f172a'} metalness={0.2} roughness={0.55} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.2} roughness={0.55} />
       </mesh>
       <mesh
         position={[0, podiumH + towerH / 2, 0]}
@@ -143,7 +142,7 @@ function CityBuilding({
         <Text
           position={[0, height + 0.38, 0]}
           fontSize={selected ? 0.2 : 0.15}
-          color={selected ? '#ffffff' : daylight ? '#0f172a' : '#cbd5e1'}
+          color={selected ? '#ffffff' : '#0f172a'}
           anchorX="center"
           anchorY="bottom"
         >
@@ -273,7 +272,6 @@ export default function CodeCity({ buildings, theme, selectedId, compact, hd, on
     [buildings],
   )
   const facades = useFacadeLibrary(theme)
-  const daylight = theme.id === 'daylight'
 
   return (
     <group>
@@ -281,15 +279,15 @@ export default function CodeCity({ buildings, theme, selectedId, compact, hd, on
 
       {!theme.nodeMode && !theme.chipMode && DISTRICTS.map((district) => {
         const y = themedDistrictY(district.id, theme)
-        const plateColor = daylight ? '#e2e8f0' : '#334155'
+        const plateColor = '#e2e8f0'
         return (
           <group key={district.id} position={[district.origin[0], y, district.origin[2]]}>
             <mesh position={[0, theme.floatIslands ? -0.12 : 0.015, 0]} receiveShadow>
               <boxGeometry args={[district.size[0] + 0.55, theme.floatIslands ? 0.35 : 0.1, district.size[1] + 0.55]} />
               <meshStandardMaterial
                 color={district.color}
-                emissive={daylight ? '#000' : district.neon}
-                emissiveIntensity={daylight ? 0 : 0.35}
+                emissive={district.neon}
+                emissiveIntensity={0.12}
                 metalness={0.2}
                 roughness={0.55}
               />
@@ -302,7 +300,7 @@ export default function CodeCity({ buildings, theme, selectedId, compact, hd, on
               <Text
                 position={[0, theme.floatIslands ? 0.4 : 0.22, district.size[1] / 2 - 0.35]}
                 fontSize={0.28}
-                color={daylight ? '#0f172a' : district.neon}
+                color="#0f172a"
                 anchorX="center"
               >
                 {district.name}

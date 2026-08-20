@@ -27,30 +27,22 @@ interface SwarmSceneProps {
   onSelectAgent: (id: string) => void
 }
 
-function ToneMap({ theme, hd }: { theme: VersionTheme; hd?: boolean }) {
+function ToneMap() {
   const { gl } = useThree()
   useLayoutEffect(() => {
     gl.toneMapping = ACESFilmicToneMapping
     gl.outputColorSpace = SRGBColorSpace
-    gl.toneMappingExposure = theme.id === 'daylight' ? 1.05 : hd ? 1.55 : 1.42
-  }, [gl, theme.id, hd])
+    gl.toneMappingExposure = 1.18
+  }, [gl])
   return null
 }
 
 function Environment({ theme, hd }: { theme: VersionTheme; hd?: boolean }) {
-  const daylight = theme.id === 'daylight'
-  const neon = theme.id === 'neon' || theme.id === 'hive' || theme.id === 'repo'
   return (
     <>
       <color attach="background" args={[theme.background]} />
       <fog attach="fog" args={[theme.fog, theme.fogNear, theme.fogFar]} />
-      <hemisphereLight
-        args={
-          daylight
-            ? ['#e0f2fe', '#4d7c0f', 0.7]
-            : ['#c4b5fd', '#1e1b4b', hd ? 0.7 : 0.55]
-        }
-      />
+      <hemisphereLight args={['#f8fafc', '#86efac', 0.95]} />
       <ambientLight intensity={theme.ambient} />
       <directionalLight
         position={theme.sun}
@@ -58,25 +50,18 @@ function Environment({ theme, hd }: { theme: VersionTheme; hd?: boolean }) {
         color={theme.sunColor}
         castShadow={false}
       />
-      {!daylight && (
-        <directionalLight position={[-12, 14, -8]} intensity={0.45} color="#93c5fd" />
-      )}
-      <pointLight
-        position={[0, 12, 0]}
-        intensity={theme.id === 'hive' ? 1.4 : neon ? 0.85 : 0.5}
-        color={theme.sunColor}
-        distance={80}
-      />
+      <directionalLight position={[-14, 18, -10]} intensity={0.55} color="#dbeafe" />
+      <pointLight position={[0, 14, 0]} intensity={0.7} color="#fff7ed" distance={120} />
       {theme.stars && (
-        <Stars radius={90} depth={40} count={theme.nodeMode ? 900 : hd ? 700 : 420} factor={2.6} saturation={0} fade speed={0.35} />
+        <Stars radius={90} depth={40} count={theme.nodeMode ? 500 : hd ? 280 : 160} factor={2.2} saturation={0} fade speed={0.35} />
       )}
       {theme.sky && (
-        <Sky distance={450000} sunPosition={[1, 1, 0]} inclination={0.49} azimuth={0.25} />
+        <Sky distance={450000} sunPosition={[1, 1.2, 0.4]} inclination={0.52} azimuth={0.25} />
       )}
       {!theme.nodeMode && !theme.floatIslands && !theme.chipMode && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
           <planeGeometry args={[180, 180]} />
-          <meshStandardMaterial color={daylight ? '#86efac' : theme.ground} roughness={0.88} />
+          <meshStandardMaterial color={theme.ground} roughness={0.9} />
         </mesh>
       )}
     </>
@@ -101,7 +86,7 @@ function SceneBody({
 
   return (
     <>
-      <ToneMap theme={theme} hd={hd} />
+      <ToneMap />
       <Environment theme={theme} hd={hd} />
       {theme.chipMode && <ChipFabric buildings={snapshot.buildings} theme={theme} />}
       <CodeCity
@@ -171,7 +156,7 @@ export default function SwarmScene(props: SwarmSceneProps) {
       onCreated={({ gl }) => {
         gl.shadowMap.type = PCFShadowMap
         gl.toneMapping = ACESFilmicToneMapping
-        gl.toneMappingExposure = 1.45
+        gl.toneMappingExposure = 1.18
         gl.outputColorSpace = SRGBColorSpace
       }}
       gl={{

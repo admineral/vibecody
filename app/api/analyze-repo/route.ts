@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ComponentMetadata } from '@/app/lib/types';
-import { getCachedRepo, cacheRepo } from '@/app/lib/cache';
+import { getCachedRepo, cacheRepo, getRepoHeadSha } from '@/app/lib/cache';
 import { ASTAnalyzer } from '@/app/lib/parser/ast-analyzer';
 import { RepoDownloader } from '@/app/lib/parser/repo-downloader';
 // import { ManifestReader } from '@/app/lib/parser/manifest-reader'; // Reserved for future use
 import * as path from 'path';
 import { glob } from 'glob';
 import * as fs from 'fs';
+
+export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -80,7 +83,8 @@ async function processRepositoryAST(
     // Check cache first
     await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'status', message: 'Checking cache...' })}\n\n`));
     
-    const cachedData = await getCachedRepo(repoUrl, branch);
+    const commitSha = await getRepoHeadSha(owner, repoName, branch, process.env.GITHUB_TOKEN);
+    const cachedData = await getCachedRepo(repoUrl, branch, commitSha);
     if (cachedData) {
       console.log(`📦 Using cached data for ${repoUrl}#${branch}`);
       
@@ -209,7 +213,7 @@ async function processRepositoryAST(
     
     // Cache results
     const repository = { owner, name: repoName, branch };
-    await cacheRepo(repoUrl, branch, components, allFiles, repository);
+    await cacheRepo(repoUrl, branch, components, allFiles, repository, commitSha);
     
     // Send completion
     await writer.write(encoder.encode(`data: ${JSON.stringify({ 

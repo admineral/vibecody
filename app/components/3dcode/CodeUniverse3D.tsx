@@ -3,7 +3,7 @@
 import { useRef, useState, useMemo, useEffect, Suspense, type ComponentRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Stars, Preload, AdaptiveDpr, AdaptiveEvents, Text } from '@react-three/drei'
-import { Group, Vector3 } from 'three'
+import { Group, Vector3, PCFShadowMap } from 'three'
 import { ComponentMetadata } from '../../lib/types'
 import FileCard3D from './FileCard3D'
 import ModularAgent from './ModularAgent'
@@ -19,6 +19,7 @@ interface CodeUniverse3DProps {
   agentsEnabled: boolean
   agentSpeed: number
   viewMode: 'orbital' | 'firstPerson' | 'follow' | 'cinematic'
+  showExplorer?: boolean
 }
 
 interface SceneProps extends CodeUniverse3DProps {
@@ -229,16 +230,20 @@ export default function CodeUniverse3D(props: CodeUniverse3DProps) {
 
   return (
     <div className="relative w-full h-full">
-      {/* File Explorer Overlay */}
-      <FileExplorer3D 
-        components={props.components}
-        selectedFile={props.selectedFile}
-        onSelectFile={props.onSelectFile}
-      />
+      {props.showExplorer !== false && (
+        <FileExplorer3D 
+          components={props.components}
+          selectedFile={props.selectedFile}
+          onSelectFile={props.onSelectFile}
+        />
+      )}
       
       {/* 3D Canvas with performance optimizations */}
       <Canvas
         camera={{ position: [0, 15, 30], fov: 60 }}
+        onCreated={({ gl }) => {
+          gl.shadowMap.type = PCFShadowMap
+        }}
         gl={{ 
           antialias: true, 
           alpha: true,

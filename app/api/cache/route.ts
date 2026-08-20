@@ -12,6 +12,9 @@ export async function GET() {
         totalSizeMB: Math.round((stats.totalSize / (1024 * 1024)) * 100) / 100,
         oldestFile: stats.oldestFile?.toISOString(),
         newestFile: stats.newestFile?.toISOString(),
+        backend: stats.backend,
+        ttlDays: stats.ttlDays,
+        ephemeral: stats.ephemeral,
       }
     });
   } catch (error) {

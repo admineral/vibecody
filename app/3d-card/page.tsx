@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { Canvas } from '@react-three/fiber';
+import { PCFShadowMap } from 'three';
 import Scene3D from './components/Scene3D';
 import ControlPanel from './components/ControlPanel';
 import { ViewMode } from './hooks/useViewMode';
@@ -48,6 +49,9 @@ function ThreeDCanvas({
       camera={{ position: [0, 8, 15], fov: 60 }}
       style={{ width: '100%', height: '100%' }}
       dpr={[1, 2]}
+      onCreated={({ gl }) => {
+        gl.shadowMap.type = PCFShadowMap
+      }}
       gl={{ 
         antialias: true, 
         alpha: false,

@@ -3,7 +3,7 @@
 import { useRef, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars, RoundedBox, Html } from '@react-three/drei'
-import { Group } from 'three'
+import { Group, PCFShadowMap } from 'three'
 import SandpackCard from './SandpackCard'
 
 // 3D Card component that contains the Sandpack editor
@@ -65,6 +65,9 @@ export default function Sandbox3DScene() {
   return (
     <Canvas
       camera={{ position: [0, 0, 20], fov: 50 }}
+      onCreated={({ gl }) => {
+        gl.shadowMap.type = PCFShadowMap
+      }}
       gl={{ 
         antialias: true, 
         alpha: true,

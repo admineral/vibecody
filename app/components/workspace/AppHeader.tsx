@@ -91,7 +91,7 @@ export default function AppHeader({
             aria-label="Visualization mode"
           >
             <ToggleGroupItem value="2d">2D Graph</ToggleGroupItem>
-            <ToggleGroupItem value="3d">3D Carousel</ToggleGroupItem>
+            <ToggleGroupItem value="3d">3D Universe</ToggleGroupItem>
           </ToggleGroup>
         )}
 

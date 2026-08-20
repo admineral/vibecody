@@ -16,6 +16,9 @@ interface CacheStats {
   totalSizeMB: number;
   oldestFile?: string;
   newestFile?: string;
+  backend?: 'kv' | 'filesystem';
+  ttlDays?: number;
+  ephemeral?: boolean;
 }
 
 interface CacheMenuProps {
@@ -90,6 +93,19 @@ export default function CacheMenu({ onStatus }: CacheMenuProps) {
                   {new Date(stats.newestFile).toLocaleDateString()}
                 </span>
               </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Storage</span>
+              <span className="font-medium">
+                {stats.backend === 'kv' ? 'Vercel KV' : 'Local disk'}
+              </span>
+            </div>
+            {stats.ephemeral && (
+              <p className="text-xs text-muted-foreground">
+                Disk cache is wiped on each Vercel deploy and cold start. Add Upstash/Vercel KV
+                (`KV_REST_API_URL` + `KV_REST_API_TOKEN`) to keep repos for {stats.ttlDays ?? 30} days,
+                or until the commit SHA changes.
+              </p>
             )}
             <div className="border-t pt-3">
               <Button

@@ -3,7 +3,7 @@
 import { useRef, useState, Suspense, useMemo, useLayoutEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Text, ScrollControls, useScroll, Billboard, Html } from '@react-three/drei'
-import { Group, Mesh, Material } from 'three'
+import { Group, Mesh, Material, PCFShadowMap } from 'three'
 import { ComponentMetadata } from '../../../lib/types'
 import { easing } from 'maath'
 import dynamic from 'next/dynamic'
@@ -412,6 +412,9 @@ function ThreeDCanvas({ components, onSelectComponent }: CodeCarousel3DProps) {
       camera={{ position: [0, 4.5, 9], fov: 75 }}
       style={{ width: '100%', height: '100%' }}
       dpr={[1, 1.5]}
+      onCreated={({ gl }) => {
+        gl.shadowMap.type = PCFShadowMap
+      }}
     >
       <Suspense fallback={<Loader />}>
         <ScrollControls pages={4} infinite>

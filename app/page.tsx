@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from 'react';
-import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 import Canvas from './components/landingpage/canvas/Canvas';
 import FileExplorer from './components/landingpage/explorer/FileExplorer';
@@ -10,6 +9,7 @@ import AppHeader, { ViewMode } from './components/workspace/AppHeader';
 import StatusBar from './components/workspace/StatusBar';
 import EmptyState from './components/workspace/EmptyState';
 import ThreeDErrorBoundary from './components/workspace/ThreeDErrorBoundary';
+import UniverseView from './components/workspace/UniverseView';
 import { useComponentGraph } from './lib/hooks/useComponentGraph';
 import { useComponentData } from './lib/context/ComponentDataContext';
 import { useAnalyzeRepo, DEFAULT_REPO_URL } from './lib/hooks/useAnalyzeRepo';
@@ -18,17 +18,6 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-
-// Dynamic import for 3D component to prevent SSR issues
-const CodeCarousel3D = dynamic(() => import('./components/landingpage/canvas/CodeCarousel3D'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full flex-col items-center justify-center gap-4 bg-background">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">Loading 3D carousel...</p>
-    </div>
-  ),
-});
 
 export default function Home() {
   const { components: contextComponents, isLoading } = useComponentData();
@@ -46,7 +35,7 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true);
   const [repoUrl, setRepoUrl] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('2d');
+  const [viewMode, setViewMode] = useState<ViewMode>('3d');
 
   const { analyzeRepository, isAnalyzing, status, setStatus, allFiles } = useAnalyzeRepo();
 
@@ -114,8 +103,9 @@ export default function Home() {
                 />
               ) : (
                 <ThreeDErrorBoundary>
-                  <CodeCarousel3D
+                  <UniverseView
                     components={components}
+                    selectedComponentName={selectedNode}
                     onSelectComponent={selectNode}
                   />
                 </ThreeDErrorBoundary>

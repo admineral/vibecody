@@ -2,13 +2,17 @@
 
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Stats, Sky } from '@react-three/drei'
+import { PCFShadowMap } from 'three'
 import FileTreeV2 from './FileTreeV2'
 import { Suspense } from 'react'
 
 export default function FileTreeV2Scene() {
   return (
     <Canvas 
-      shadows
+      shadows="percentage"
+      onCreated={({ gl }) => {
+        gl.shadowMap.type = PCFShadowMap
+      }}
       dpr={[1, 2]}
       performance={{ min: 0.5 }}
       gl={{ 

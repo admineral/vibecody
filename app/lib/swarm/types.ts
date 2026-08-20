@@ -1,4 +1,5 @@
 export type SwarmVersionId =
+  | 'repo'
   | 'chip'
   | 'neon'
   | 'daylight'
@@ -127,6 +128,7 @@ export interface VersionTheme {
   nodeMode: boolean
   hivePull: boolean
   chipMode: boolean
+  cardMode?: boolean
 }
 
 export interface WorldSnapshot {
@@ -139,4 +141,11 @@ export interface WorldSnapshot {
   trails: TrailSegment[]
   log: string[]
   activeStep: FlowStep | null
+  repoName?: string
+}
+
+export interface SwarmCatalog {
+  buildings?: BuildingDef[]
+  missions?: MissionFlow[]
+  repoName?: string
 }

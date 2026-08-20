@@ -2,9 +2,11 @@
 
 import { useMemo } from 'react'
 import { Text } from '@react-three/drei'
-import type { BuildingState, VersionTheme } from '@/app/lib/swarm/types'
+import type { BuildingDef, BuildingState, VersionTheme } from '@/app/lib/swarm/types'
 import { DISTRICTS } from '@/app/lib/swarm/cityData'
-import { themedBuildingPosition, themedDistrictY } from '@/app/lib/swarm/cityLayout'
+import { buildingFootprint, themedBuildingPosition, themedDistrictY } from '@/app/lib/swarm/cityLayout'
+import CityFabric from './CityFabric'
+import { useFacadeLibrary, type Facade } from './cityTextures'
 
 interface CodeCityProps {
   buildings: BuildingState[]
@@ -14,24 +16,159 @@ interface CodeCityProps {
   onSelect: (id: string) => void
 }
 
-function BuildingMesh({
+function RoofKit({
+  kind,
+  width,
+  depth,
+  y,
+  color,
+  neon,
+}: {
+  kind: BuildingDef['kind']
+  width: number
+  depth: number
+  y: number
+  color: string
+  neon: boolean
+}) {
+  return (
+    <group position={[0, y, 0]}>
+      <mesh>
+        <boxGeometry args={[width * 0.92, 0.12, depth * 0.92]} />
+        <meshStandardMaterial color={neon ? '#020617' : '#334155'} metalness={0.35} roughness={0.4} />
+      </mesh>
+      {kind === 'page' && (
+        <mesh position={[0, 0.55, 0]}>
+          <cylinderGeometry args={[0.035, 0.05, 1.1, 6]} />
+          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={neon ? 0.7 : 0.15} metalness={0.7} roughness={0.25} />
+        </mesh>
+      )}
+      {(kind === 'util' || kind === 'component') && (
+        <>
+          <mesh position={[width * 0.18, 0.16, depth * 0.12]}>
+            <boxGeometry args={[0.28, 0.2, 0.22]} />
+            <meshStandardMaterial color="#475569" metalness={0.5} roughness={0.35} />
+          </mesh>
+          <mesh position={[-width * 0.2, 0.12, -depth * 0.16]}>
+            <boxGeometry args={[0.22, 0.14, 0.22]} />
+            <meshStandardMaterial color="#64748b" metalness={0.45} roughness={0.4} />
+          </mesh>
+        </>
+      )}
+      {kind === 'api' && (
+        <mesh position={[0, 0.14, 0]} rotation={[Math.PI / 2.6, 0, 0]}>
+          <cylinderGeometry args={[0.22, 0.22, 0.04, 12]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+        </mesh>
+      )}
+      {neon && (
+        <mesh position={[0, 0.08, 0]}>
+          <boxGeometry args={[width * 0.98, 0.04, depth * 0.98]} />
+          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.8} />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
+function CityBuilding({
   building,
   theme,
   selected,
   compact,
+  facade,
   onSelect,
 }: {
   building: BuildingState
   theme: VersionTheme
   selected: boolean
   compact?: boolean
+  facade: Facade | null
   onSelect: () => void
 }) {
   const [x, y, z] = themedBuildingPosition(building, theme)
   const height = Math.max(0.4, building.height * building.growth)
+  const [fw, fd] = buildingFootprint(building.kind, building.id)
   const color = building.hasBug ? '#ef4444' : selected ? '#f0abfc' : building.color
-  const emissive = building.beingWorked || building.hasBug ? color : theme.nodeMode ? color : '#000000'
-  const emissiveIntensity = building.hasBug ? 0.9 : building.beingWorked ? 0.55 : theme.nodeMode ? 0.35 : 0
+  const neon = theme.id === 'neon' || theme.id === 'hive'
+  const daylight = theme.id === 'daylight'
+  const podiumH = Math.min(0.42, height * 0.16)
+  const roofH = 0.12
+  const towerH = Math.max(0.28, height - podiumH - roofH)
+  const emissiveIntensity = building.hasBug ? 0.85 : building.beingWorked ? 0.7 : neon ? 0.48 : daylight ? 0.1 : 0.28
+
+  return (
+    <group position={[x, y, z]} scale={[1, building.growth, 1]}>
+      <mesh position={[0, podiumH / 2, 0]} onClick={(e) => { e.stopPropagation(); onSelect() }}>
+        <boxGeometry args={[fw * 1.14, podiumH, fd * 1.14]} />
+        <meshStandardMaterial color={daylight ? '#cbd5e1' : '#0f172a'} metalness={0.2} roughness={0.55} />
+      </mesh>
+      <mesh
+        position={[0, podiumH + towerH / 2, 0]}
+        onClick={(e) => {
+          e.stopPropagation()
+          onSelect()
+        }}
+      >
+        <boxGeometry args={[fw, towerH, fd]} />
+        <meshStandardMaterial
+          map={facade?.map}
+          emissiveMap={facade?.emissiveMap}
+          color={facade ? '#ffffff' : color}
+          emissive={building.hasBug ? '#ef4444' : color}
+          emissiveIntensity={emissiveIntensity}
+          metalness={neon ? 0.42 : 0.12}
+          roughness={neon ? 0.28 : 0.46}
+          transparent={building.growth < 1}
+          opacity={0.4 + building.growth * 0.6}
+        />
+      </mesh>
+      <RoofKit
+        kind={building.kind}
+        width={fw}
+        depth={fd}
+        y={podiumH + towerH + roofH / 2}
+        color={color}
+        neon={neon}
+      />
+      {selected && (
+        <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[Math.max(fw, fd) * 0.72, Math.max(fw, fd) * 0.95, 28]} />
+          <meshBasicMaterial color="#f0abfc" transparent opacity={0.9} />
+        </mesh>
+      )}
+      {(!compact || selected) && (
+        <Text
+          position={[0, height + 0.38, 0]}
+          fontSize={selected ? 0.2 : 0.15}
+          color={selected ? '#ffffff' : daylight ? '#0f172a' : '#cbd5e1'}
+          anchorX="center"
+          anchorY="bottom"
+        >
+          {building.name}
+        </Text>
+      )}
+    </group>
+  )
+}
+
+function BuildingMesh({
+  building,
+  theme,
+  selected,
+  compact,
+  facade,
+  onSelect,
+}: {
+  building: BuildingState
+  theme: VersionTheme
+  selected: boolean
+  compact?: boolean
+  facade: Facade | null
+  onSelect: () => void
+}) {
+  const [x, y, z] = themedBuildingPosition(building, theme)
+  const color = building.hasBug ? '#ef4444' : selected ? '#f0abfc' : building.color
 
   if (theme.chipMode) {
     const body = 0.38 + Math.min(0.7, building.lines / 500)
@@ -103,48 +240,14 @@ function BuildingMesh({
   }
 
   return (
-    <group position={[x, y, z]} scale={[1, building.growth, 1]}>
-      <mesh
-        position={[0, height / 2, 0]}
-        castShadow={!theme.floatIslands}
-        onClick={(e) => {
-          e.stopPropagation()
-          onSelect()
-        }}
-      >
-        <boxGeometry args={[0.95, height, 0.95]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={emissive}
-          emissiveIntensity={emissiveIntensity}
-          metalness={theme.id === 'neon' ? 0.55 : 0.2}
-          roughness={0.35}
-          transparent={building.growth < 1}
-          opacity={0.35 + building.growth * 0.65}
-        />
-      </mesh>
-      {Array.from({ length: compact ? 0 : Math.min(2, Math.max(0, Math.floor(height))) }).map((_, i) => (
-        <mesh key={i} position={[0.48, 0.28 + i * 0.42, 0.28]}>
-          <boxGeometry args={[0.06, 0.14, 0.14]} />
-          <meshStandardMaterial
-            color={building.beingWorked ? '#fde047' : '#ffe066'}
-            emissive="#fde047"
-            emissiveIntensity={building.beingWorked ? 1.2 : theme.id === 'daylight' ? 0.15 : 0.45}
-          />
-        </mesh>
-      ))}
-      {(!compact || selected) && (
-        <Text
-          position={[0, height + 0.22, 0]}
-          fontSize={selected ? 0.2 : 0.16}
-          color={selected ? '#ffffff' : '#cbd5e1'}
-          anchorX="center"
-          anchorY="bottom"
-        >
-          {building.name}
-        </Text>
-      )}
-    </group>
+    <CityBuilding
+      building={building}
+      theme={theme}
+      selected={selected}
+      compact={compact}
+      facade={facade}
+      onSelect={onSelect}
+    />
   )
 }
 
@@ -153,29 +256,38 @@ export default function CodeCity({ buildings, theme, selectedId, compact, onSele
     () => buildings.filter((b) => b.spawned),
     [buildings],
   )
+  const facades = useFacadeLibrary(theme)
+  const daylight = theme.id === 'daylight'
+  const neon = theme.id === 'neon' || theme.id === 'hive'
 
   return (
     <group>
+      <CityFabric buildings={visible} theme={theme} facades={facades} />
+
       {!theme.nodeMode && !theme.chipMode && DISTRICTS.map((district) => {
         const y = themedDistrictY(district.id, theme)
-        const plateColor = theme.id === 'daylight' ? '#e2e8f0' : district.color
+        const plateColor = daylight ? '#e2e8f0' : '#111827'
         return (
           <group key={district.id} position={[district.origin[0], y, district.origin[2]]}>
-            <mesh position={[0, theme.floatIslands ? -0.12 : 0.02, 0]} receiveShadow>
-              <boxGeometry args={[district.size[0], theme.floatIslands ? 0.35 : 0.08, district.size[1]]} />
+            <mesh position={[0, theme.floatIslands ? -0.12 : 0.015, 0]} receiveShadow>
+              <boxGeometry args={[district.size[0] + 0.55, theme.floatIslands ? 0.35 : 0.1, district.size[1] + 0.55]} />
               <meshStandardMaterial
-                color={plateColor}
-                emissive={theme.id === 'neon' || theme.id === 'hive' ? district.neon : '#000'}
-                emissiveIntensity={theme.id === 'neon' || theme.id === 'hive' ? 0.18 : 0}
-                transparent
-                opacity={theme.floatIslands ? 0.85 : 0.95}
+                color={district.color}
+                emissive={neon ? district.neon : '#000'}
+                emissiveIntensity={neon ? 0.22 : 0}
+                metalness={0.2}
+                roughness={0.55}
               />
+            </mesh>
+            <mesh position={[0, theme.floatIslands ? 0.08 : 0.05, 0]} receiveShadow>
+              <boxGeometry args={[district.size[0] - 0.25, 0.06, district.size[1] - 0.25]} />
+              <meshStandardMaterial color={plateColor} roughness={0.7} metalness={0.08} />
             </mesh>
             {!compact && (
               <Text
-                position={[0, theme.floatIslands ? 0.4 : 0.18, district.size[1] / 2 - 0.4]}
-                fontSize={0.32}
-                color={theme.id === 'daylight' ? '#0f172a' : district.neon}
+                position={[0, theme.floatIslands ? 0.4 : 0.22, district.size[1] / 2 - 0.35]}
+                fontSize={0.28}
+                color={daylight ? '#0f172a' : district.neon}
                 anchorX="center"
               >
                 {district.name}
@@ -205,6 +317,7 @@ export default function CodeCity({ buildings, theme, selectedId, compact, onSele
           theme={theme}
           selected={selectedId === building.id}
           compact={compact}
+          facade={facades?.byKind[building.kind] ?? null}
           onSelect={() => onSelect(building.id)}
         />
       ))}

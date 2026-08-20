@@ -1,6 +1,7 @@
 "use client";
 
-import { Boxes, GitBranch, Loader2, PanelLeft, PanelRight } from 'lucide-react';
+import Link from 'next/link';
+import { Boxes, Gamepad2, GitBranch, Loader2, PanelLeft, PanelRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -94,6 +95,13 @@ export default function AppHeader({
             <ToggleGroupItem value="3d">3D Universe</ToggleGroupItem>
           </ToggleGroup>
         )}
+
+        <Button asChild size="sm">
+          <Link href="/swarm">
+            <Gamepad2 />
+            Swarm City
+          </Link>
+        </Button>
 
         <LabsMenu />
         <CacheMenu onStatus={onStatus} />

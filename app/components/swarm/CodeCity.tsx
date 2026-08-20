@@ -33,6 +33,53 @@ function BuildingMesh({
   const emissive = building.beingWorked || building.hasBug ? color : theme.nodeMode ? color : '#000000'
   const emissiveIntensity = building.hasBug ? 0.9 : building.beingWorked ? 0.55 : theme.nodeMode ? 0.35 : 0
 
+  if (theme.chipMode) {
+    const body = 0.38 + Math.min(0.7, building.lines / 500)
+    return (
+      <group position={[x, y, z]} scale={[1, building.growth, 1]}>
+        <mesh
+          position={[0, 0.16, 0]}
+          onClick={(e) => {
+            e.stopPropagation()
+            onSelect()
+          }}
+        >
+          <boxGeometry args={[1.15, 0.28, 1.15]} />
+          <meshStandardMaterial
+            color={building.hasBug ? '#7f1d1d' : '#1e293b'}
+            emissive={color}
+            emissiveIntensity={building.beingWorked || selected ? 0.55 : 0.12}
+            metalness={0.5}
+            roughness={0.35}
+          />
+        </mesh>
+        {[-0.28, 0, 0.28].map((fx) => (
+          <mesh key={fx} position={[fx, 0.16 + body / 2, 0]}>
+            <boxGeometry args={[0.14, body, 0.72]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={building.beingWorked ? 0.8 : 0.25}
+              metalness={0.7}
+              roughness={0.22}
+            />
+          </mesh>
+        ))}
+        {([[-0.48, -0.48], [0.48, -0.48], [-0.48, 0.48], [0.48, 0.48]] as const).map(([px, pz]) => (
+          <mesh key={`${px}-${pz}`} position={[px, 0.34, pz]}>
+            <cylinderGeometry args={[0.08, 0.08, 0.08, 8]} />
+            <meshStandardMaterial color="#facc15" metalness={0.9} roughness={0.15} />
+          </mesh>
+        ))}
+        {selected && (
+          <Text position={[0, body + 0.55, 0]} fontSize={0.16} color="#fde68a" anchorX="center">
+            {building.name}
+          </Text>
+        )}
+      </group>
+    )
+  }
+
   if (theme.nodeMode) {
     const radius = 0.28 + building.lines / 800
     return (
@@ -109,7 +156,7 @@ export default function CodeCity({ buildings, theme, selectedId, compact, onSele
 
   return (
     <group>
-      {!theme.nodeMode && DISTRICTS.map((district) => {
+      {!theme.nodeMode && !theme.chipMode && DISTRICTS.map((district) => {
         const y = themedDistrictY(district.id, theme)
         const plateColor = theme.id === 'daylight' ? '#e2e8f0' : district.color
         return (
@@ -138,7 +185,7 @@ export default function CodeCity({ buildings, theme, selectedId, compact, onSele
         )
       })}
 
-      {theme.hivePull && (
+      {theme.hivePull && !theme.chipMode && (
         <mesh position={[0, 1.4, 0]}>
           <octahedronGeometry args={[1.1, 0]} />
           <meshStandardMaterial

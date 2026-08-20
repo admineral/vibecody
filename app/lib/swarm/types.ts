@@ -1,4 +1,5 @@
 export type SwarmVersionId =
+  | 'chip'
   | 'neon'
   | 'daylight'
   | 'universe'
@@ -125,6 +126,7 @@ export interface VersionTheme {
   floatIslands: boolean
   nodeMode: boolean
   hivePull: boolean
+  chipMode: boolean
 }
 
 export interface WorldSnapshot {

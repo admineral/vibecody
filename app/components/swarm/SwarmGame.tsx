@@ -19,9 +19,9 @@ const SwarmScene = dynamic(() => import('./SwarmScene'), {
 })
 
 export default function SwarmGame() {
-  const [versionId, setVersionId] = useState<SwarmVersionId>('neon')
+  const [versionId, setVersionId] = useState<SwarmVersionId>('chip')
   const [missionId, setMissionId] = useState('auth-leak')
-  const [cameraMode, setCameraMode] = useState<CameraMode>('follow')
+  const [cameraMode, setCameraMode] = useState<CameraMode>('orbit')
   const [followId, setFollowId] = useState<string | null>('lead')
   const [playing, setPlaying] = useState(true)
   const [speed, setSpeed] = useState(1)
@@ -33,6 +33,11 @@ export default function SwarmGame() {
   const handleFollow = (id: string | null) => {
     setFollowId(id)
     if (id) setCameraMode('follow')
+  }
+
+  const handleVersion = (id: SwarmVersionId) => {
+    setVersionId(id)
+    if (id === 'chip') setCameraMode('orbit')
   }
 
   return (
@@ -57,7 +62,7 @@ export default function SwarmGame() {
         followId={followId}
         playing={playing}
         speed={speed}
-        onVersion={setVersionId}
+        onVersion={handleVersion}
         onMission={setMissionId}
         onCamera={setCameraMode}
         onFollow={handleFollow}

@@ -2,6 +2,27 @@ import type { SwarmVersionId, VersionTheme } from './types'
 
 export const VERSIONS: VersionTheme[] = [
   {
+    id: 'chip',
+    label: 'Die City',
+    tagline: '2.5D silicon: lanes, transistors, electrons — tilt up to fly',
+    background: '#030807',
+    fog: '#071410',
+    fogNear: 12,
+    fogFar: 48,
+    ground: '#0b241c',
+    road: '#d4a017',
+    ambient: 0.28,
+    sun: [8, 30, 4],
+    sunColor: '#fde68a',
+    sunIntensity: 0.85,
+    stars: true,
+    sky: false,
+    floatIslands: false,
+    nodeMode: false,
+    hivePull: false,
+    chipMode: true,
+  },
+  {
     id: 'neon',
     label: 'Neon City',
     tagline: 'Night drones over a cyberpunk repo',
@@ -20,6 +41,7 @@ export const VERSIONS: VersionTheme[] = [
     floatIslands: false,
     nodeMode: false,
     hivePull: false,
+    chipMode: false,
   },
   {
     id: 'daylight',
@@ -40,6 +62,7 @@ export const VERSIONS: VersionTheme[] = [
     floatIslands: false,
     nodeMode: false,
     hivePull: false,
+    chipMode: false,
   },
   {
     id: 'universe',
@@ -60,6 +83,7 @@ export const VERSIONS: VersionTheme[] = [
     floatIslands: true,
     nodeMode: false,
     hivePull: false,
+    chipMode: false,
   },
   {
     id: 'gource',
@@ -80,6 +104,7 @@ export const VERSIONS: VersionTheme[] = [
     floatIslands: false,
     nodeMode: true,
     hivePull: false,
+    chipMode: false,
   },
   {
     id: 'hive',
@@ -100,6 +125,7 @@ export const VERSIONS: VersionTheme[] = [
     floatIslands: false,
     nodeMode: false,
     hivePull: true,
+    chipMode: false,
   },
 ]
 

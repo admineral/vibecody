@@ -9,6 +9,7 @@ import CodeCity from './CodeCity'
 import SwarmDrones from './SwarmDrones'
 import CodeSlabs from './CodeSlabs'
 import ActivityTrails from './ActivityTrails'
+import ChipFabric from './ChipFabric'
 import CameraRig from './CameraRig'
 
 interface SwarmSceneProps {
@@ -27,7 +28,7 @@ function Environment({ theme, portrait }: { theme: VersionTheme; portrait?: bool
   return (
     <>
       <color attach="background" args={[theme.background]} />
-      <fog attach="fog" args={[theme.fog, portrait ? 10 : theme.fogNear, portrait ? 42 : theme.fogFar]} />
+      <fog attach="fog" args={[theme.fog, theme.chipMode ? 16 : portrait ? 10 : theme.fogNear, theme.chipMode ? 56 : portrait ? 42 : theme.fogFar]} />
       <ambientLight intensity={theme.ambient} />
       <directionalLight
         position={theme.sun}
@@ -42,7 +43,7 @@ function Environment({ theme, portrait }: { theme: VersionTheme; portrait?: bool
       {theme.sky && (
         <Sky distance={450000} sunPosition={[1, 1, 0]} inclination={0.49} azimuth={0.25} />
       )}
-      {!theme.nodeMode && !theme.floatIslands && (
+      {!theme.nodeMode && !theme.floatIslands && !theme.chipMode && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow>
           <planeGeometry args={[120, 120]} />
           <meshStandardMaterial color={theme.ground} />
@@ -68,6 +69,7 @@ function SceneBody({
   return (
     <>
       <Environment theme={theme} portrait={portrait} />
+      {theme.chipMode && <ChipFabric buildings={snapshot.buildings} theme={theme} />}
       <CodeCity
         buildings={snapshot.buildings}
         theme={theme}
@@ -92,14 +94,17 @@ function SceneBody({
         compact={portrait}
         selectedId={selectedBuildingId}
       />
-      <ActivityTrails trails={snapshot.trails} theme={theme} now={snapshot.time} />
-      <CameraRig mode={cameraMode} followId={followId} groupRefs={groupRefs} portrait={portrait} />
+      {!theme.chipMode && (
+        <ActivityTrails trails={snapshot.trails} theme={theme} now={snapshot.time} />
+      )}
+      <CameraRig mode={cameraMode} followId={followId} groupRefs={groupRefs} portrait={portrait} chipMode={theme.chipMode} />
     </>
   )
 }
 
 export default function SwarmScene(props: SwarmSceneProps) {
   const cameraPosition = useMemo<[number, number, number]>(() => {
+    if (props.theme.chipMode) return [0.4, 22, 12]
     if (props.portrait) {
       if (props.theme.nodeMode) return [0, 12, 14]
       if (props.theme.hivePull) return [5, 11, 8]
@@ -113,7 +118,7 @@ export default function SwarmScene(props: SwarmSceneProps) {
 
   return (
     <Canvas
-      camera={{ position: cameraPosition, fov: props.portrait ? 72 : 55, near: 0.1, far: 160 }}
+      camera={{ position: cameraPosition, fov: props.theme.chipMode ? 62 : props.portrait ? 72 : 55, near: 0.1, far: 160 }}
       dpr={[1, 1.25]}
       shadows={false}
       onCreated={({ gl }) => {

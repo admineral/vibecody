@@ -48,12 +48,22 @@ function Drone({
     const building = buildings.find((b) => b.id === runtime.targetId)
     if (building) {
       const [x, y, z] = themedBuildingPosition(building, theme)
-      target.current.set(x, y + building.height * building.growth + 2.3, z)
+      if (theme.chipMode) {
+        target.current.set(x, 0.52, z)
+      } else {
+        target.current.set(x, y + building.height * building.growth + 2.3, z)
+      }
     } else {
       target.current.set(...runtime.position)
     }
 
-    if (theme.hivePull) {
+    if (theme.chipMode) {
+      const dx = target.current.x - g.position.x
+      const dz = target.current.z - g.position.z
+      if (Math.abs(dx) > 0.14 && Math.abs(dz) > 0.14) {
+        target.current.z = g.position.z
+      }
+    } else if (theme.hivePull) {
       const t = state.clock.elapsedTime * (0.7 + def.speed * 0.2) + def.speed * 2
       const radius = 1.35 + (def.speed - 0.8)
       target.current.x += Math.cos(t) * radius
@@ -68,11 +78,13 @@ function Drone({
     if (g.position.distanceTo(dummy.current) > 0.05) {
       g.lookAt(dummy.current)
     }
-    g.position.y += Math.sin(state.clock.elapsedTime * 2.2 + def.speed) * 0.012
+    if (!theme.chipMode) {
+      g.position.y += Math.sin(state.clock.elapsedTime * 2.2 + def.speed) * 0.012
+    }
     groupRefs.current[def.id] = g
   })
 
-  const size = highlighted ? 0.38 : 0.3
+  const size = theme.chipMode ? (highlighted ? 0.2 : 0.14) : highlighted ? 0.38 : 0.3
 
   return (
     <group
@@ -82,9 +94,9 @@ function Drone({
         onSelect()
       }}
     >
-      <Trail width={highlighted ? 1.6 : 0.9} length={theme.nodeMode ? 18 : 8} color={def.color} attenuation={(w) => w * 0.45}>
+      <Trail width={highlighted ? 1.6 : 0.9} length={theme.chipMode ? 14 : theme.nodeMode ? 18 : 8} color={def.color} attenuation={(w) => w * 0.45}>
         <mesh>
-          <icosahedronGeometry args={[size, 0]} />
+          <icosahedronGeometry args={[size, theme.chipMode ? 1 : 0]} />
           <meshStandardMaterial
             color={def.color}
             emissive={def.color}
@@ -98,11 +110,13 @@ function Drone({
         <sphereGeometry args={[size * 0.45, 8, 8]} />
         <meshBasicMaterial color="#ffffff" transparent opacity={0.85} />
       </mesh>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[size * 1.6, size * 1.85, 20]} />
-        <meshBasicMaterial color={def.color} transparent opacity={runtime?.beam ? 0.7 : 0.2} />
-      </mesh>
-      {runtime?.beam && (
+      {!theme.chipMode && (
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[size * 1.6, size * 1.85, 20]} />
+          <meshBasicMaterial color={def.color} transparent opacity={runtime?.beam ? 0.7 : 0.2} />
+        </mesh>
+      )}
+      {runtime?.beam && !theme.chipMode && (
         <mesh position={[0, -1.2, 0]}>
           <cylinderGeometry args={[0.03, 0.18, 2.4, 8]} />
           <meshBasicMaterial color={def.color} transparent opacity={0.35} />

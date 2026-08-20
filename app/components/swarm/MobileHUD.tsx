@@ -252,7 +252,17 @@ export default function MobileHUD({
                 </section>
 
                 <section className="flex items-center gap-2">
-                  {(['orbit', 'follow', 'cinematic'] as CameraMode[]).map((mode) => (
+                  {(['orbit', 'follow', 'cinematic'] as CameraMode[]).map((mode) => {
+                    const label = theme.chipMode
+                      ? mode === 'orbit'
+                        ? 'sat'
+                        : mode === 'follow'
+                          ? 'e−'
+                          : 'super'
+                      : mode === 'cinematic'
+                        ? 'fly'
+                        : mode
+                    return (
                     <button
                       key={mode}
                       type="button"
@@ -261,9 +271,10 @@ export default function MobileHUD({
                         cameraMode === mode ? 'bg-fuchsia-500' : 'bg-white/10'
                       }`}
                     >
-                      {mode === 'cinematic' ? 'fly' : mode}
+                      {label}
                     </button>
-                  ))}
+                    )
+                  })}
                   <button
                     type="button"
                     onClick={onRestart}

@@ -556,11 +556,11 @@ export default function Home() {
       
       {/* Main content */}
       <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
           {/* File Explorer */}
           {isSidebarOpen && (
             <>
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
+              <ResizablePanel defaultSize="20%" minSize="15%" maxSize="35%">
                 <FileExplorer 
                   components={components}
                   allFiles={allFiles}
@@ -573,7 +573,7 @@ export default function Home() {
           )}
           
           {/* Canvas */}
-          <ResizablePanel defaultSize={isSidebarOpen && isDetailsPanelOpen ? 60 : isSidebarOpen || isDetailsPanelOpen ? 80 : 100}>
+          <ResizablePanel defaultSize={isSidebarOpen && isDetailsPanelOpen ? "60%" : isSidebarOpen || isDetailsPanelOpen ? "80%" : "100%"}>
             {hasComponents ? (
               viewMode === '2d' ? (
                 <Canvas 
@@ -618,7 +618,7 @@ export default function Home() {
           {isDetailsPanelOpen && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={40}>
+              <ResizablePanel defaultSize="20%" minSize="15%" maxSize="40%">
                 <PropertiesPanel 
                   component={selectedComponent} 
                   relatedComponents={components}

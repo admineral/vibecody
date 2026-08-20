@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useMemo, useEffect, Suspense } from 'react'
+import { useRef, useState, useMemo, useEffect, Suspense, type ComponentRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Stars, Preload, AdaptiveDpr, AdaptiveEvents, Text } from '@react-three/drei'
 import { Group, Vector3 } from 'three'
@@ -9,7 +9,8 @@ import FileCard3D from './FileCard3D'
 import ModularAgent from './ModularAgent'
 import FileExplorer3D from './FileExplorer3D'
 import { calculateFilePositions } from './utils/spatialLayout'
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
+
+type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 
 interface CodeUniverse3DProps {
   components: ComponentMetadata[]

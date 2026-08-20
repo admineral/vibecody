@@ -227,11 +227,11 @@ export default function CodeSandbox2Page() {
       
       {/* Main content */}
       <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
           {/* File Explorer */}
           {isSidebarOpen && (
             <>
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
+              <ResizablePanel defaultSize="20%" minSize="15%" maxSize="35%">
                 <FileExplorer 
                   components={contextComponents}
                   allFiles={allFiles}
@@ -244,7 +244,7 @@ export default function CodeSandbox2Page() {
           )}
           
           {/* Sandpack Editor */}
-          <ResizablePanel defaultSize={isSidebarOpen ? 80 : 100}>
+          <ResizablePanel defaultSize={isSidebarOpen ? "80%" : "100%"}>
             {contextComponents.length > 0 ? (
               <SandpackEditor 
                 component={selectedComponent || contextComponents[0]}

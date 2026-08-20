@@ -37,11 +37,11 @@ export const useComponentData = () => useContext(ComponentDataContext);
 // Provider component
 export function ComponentDataProvider({ children }: { children: ReactNode }) {
   const [components, setComponents] = useState<ComponentMetadata[]>([]);
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [ignoredFiles, setIgnoredFiles] = useState<Set<string>>(new Set());
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
-  // Load ignore list from localStorage on mount
+  // Load ignore list and saved component data from localStorage on mount
   useEffect(() => {
     // Default files to ignore
     const defaultIgnoredFiles = [
@@ -71,22 +71,29 @@ export function ComponentDataProvider({ children }: { children: ReactNode }) {
       'components.json'
     ];
 
-    if (typeof window !== 'undefined') {
-      const savedIgnoreList = localStorage.getItem('ignoreList');
-      if (savedIgnoreList) {
-        try {
-          const parsed = JSON.parse(savedIgnoreList);
-          setIgnoredFiles(new Set(parsed));
-        } catch (error) {
-          console.error('Failed to parse ignore list from localStorage:', error);
-          // If parsing fails, use default ignored files
-          setIgnoredFiles(new Set(defaultIgnoredFiles));
-        }
-      } else {
-        // If no saved ignore list, use default ignored files
-        setIgnoredFiles(new Set(defaultIgnoredFiles));
+    let ignored = new Set(defaultIgnoredFiles);
+    const savedIgnoreList = localStorage.getItem('ignoreList');
+    if (savedIgnoreList) {
+      try {
+        ignored = new Set<string>(JSON.parse(savedIgnoreList));
+      } catch (error) {
+        console.error('Failed to parse ignore list from localStorage:', error);
       }
     }
+    setIgnoredFiles(ignored);
+
+    // Restore the last analyzed repository so a refresh doesn't lose the graph
+    const savedComponents = localStorage.getItem('componentData');
+    if (savedComponents) {
+      try {
+        const parsed: ComponentMetadata[] = JSON.parse(savedComponents);
+        setComponents(parsed.filter(comp => !ignored.has(comp.file)));
+      } catch (error) {
+        console.error('Failed to parse component data from localStorage:', error);
+      }
+    }
+
+    setIsLoading(false);
   }, []);
 
   // Save ignore list to localStorage whenever it changes

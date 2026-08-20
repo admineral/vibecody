@@ -19,6 +19,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import ComponentNode from './ComponentNode';
+import { Button } from '@/components/ui/button';
 
 // Define nodeTypes at module level to prevent React Flow warnings
 const nodeTypes: NodeTypes = {
@@ -61,12 +62,9 @@ interface CanvasProps {
 function CanvasControls({ onReset }: { onReset: () => void }) {
   return (
     <Panel position="top-right" className="flex gap-2">
-      <button 
-        onClick={onReset}
-        className="bg-gray-800 text-gray-200 text-sm py-1 px-3 rounded shadow hover:bg-gray-700 transition-colors border border-gray-600"
-      >
+      <Button variant="secondary" size="sm" onClick={onReset}>
         Reset Layout
-      </button>
+      </Button>
     </Panel>
   );
 }
@@ -145,25 +143,25 @@ function CanvasContent({
       maxZoom={2}
       defaultViewport={defaultViewport}
       attributionPosition="bottom-right"
-      className="bg-gray-900"
+      className="bg-background"
     >
       <Background 
         variant={BackgroundVariant.Dots} 
         gap={16} 
         size={1} 
-        color="#4b5563" // gray-600 for better contrast on dark background
+        color="#4b5563" // muted dots for contrast on the dark canvas
       />
       <Controls 
         position="bottom-right"
         showInteractive={false}
-        className="!bg-gray-800 !shadow-md !border !border-gray-600 [&>button]:!bg-gray-800 [&>button]:!border-gray-600 [&>button]:!text-gray-200 [&>button:hover]:!bg-gray-700"
+        className="!bg-card !shadow-md !border !border-border [&>button]:!bg-card [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-accent"
       />
       <MiniMap 
         nodeStrokeWidth={3}
         zoomable
         pannable
-        maskColor="rgba(17, 24, 39, 0.6)" // Dark mask for dark theme
-        className="!border !border-gray-600 !bg-gray-800"
+        maskColor="rgba(0, 0, 0, 0.6)" // Dark mask for dark theme
+        className="!border !border-border !bg-card"
       />
       <CanvasControls onReset={handleResetLayout} />
     </ReactFlow>

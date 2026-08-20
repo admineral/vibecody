@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { FileItem, ComponentType, ComponentMetadata } from '@/app/lib/types';
 import { useComponentData } from '@/app/lib/context/ComponentDataContext';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import IgnoreList from './IgnoreList';
 import { 
@@ -84,13 +85,13 @@ function FileTreeItem({
   const getFileTypeBadge = () => {
     if (item.metadata) {
       return (
-        <span className={`text-[10px] px-1 ml-2 rounded text-white ${
-          item.metadata.type === ComponentType.PAGE ? 'bg-blue-500' :
-          item.metadata.type === ComponentType.LAYOUT ? 'bg-violet-500' :
-          item.metadata.type === ComponentType.COMPONENT ? 'bg-emerald-500' :
-          item.metadata.type === ComponentType.HOOK ? 'bg-orange-500' :
-          item.metadata.type === ComponentType.CONTEXT ? 'bg-pink-500' :
-          'bg-gray-500'
+        <span className={`text-[10px] px-1 ml-2 rounded ${
+          item.metadata.type === ComponentType.PAGE ? 'bg-blue-500/20 text-blue-300' :
+          item.metadata.type === ComponentType.LAYOUT ? 'bg-violet-500/20 text-violet-300' :
+          item.metadata.type === ComponentType.COMPONENT ? 'bg-emerald-500/20 text-emerald-300' :
+          item.metadata.type === ComponentType.HOOK ? 'bg-orange-500/20 text-orange-300' :
+          item.metadata.type === ComponentType.CONTEXT ? 'bg-pink-500/20 text-pink-300' :
+          'bg-muted text-muted-foreground'
         }`}>
           {item.metadata.type}
         </span>
@@ -98,7 +99,7 @@ function FileTreeItem({
     }
     if (item.fileType && item.fileType !== 'file') {
       return (
-        <span className="text-[10px] px-1 ml-2 rounded bg-gray-400 text-white">
+        <span className="text-[10px] px-1 ml-2 rounded bg-muted text-muted-foreground">
           {item.fileType}
         </span>
       );
@@ -150,51 +151,41 @@ function FileTreeItem({
   return (
     <div>
       <div
-        className={`flex items-center py-0.5 px-2 hover:bg-gray-700 cursor-pointer transition-colors ${
-          isSelected ? 'bg-blue-900 border-r-2 border-blue-400' : ''
+        className={`flex items-center py-0.5 px-2 hover:bg-sidebar-accent cursor-pointer transition-colors ${
+          isSelected ? 'bg-sidebar-accent border-r-2 border-primary' : ''
         }`}
         style={indentStyle}
         onClick={handleClick}
       >
         {/* Checkbox for selection */}
-        <div 
+        <div
           className="checkbox-container mr-2 flex items-center"
           onClick={handleCheckboxChange}
         >
-          {item.type === 'directory' ? (
-            // Directory checkbox (shows indeterminate state)
-            <div className="relative">
-              <input
-                type="checkbox"
-                checked={allChildrenSelected}
-                onChange={() => {}} // Handled by onClick
-                className="w-3 h-3 text-blue-400 border-gray-500 bg-gray-700 rounded focus:ring-blue-400 focus:ring-1"
-              />
-              {someChildrenSelected && !allChildrenSelected && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-sm"></div>
-                </div>
-              )}
-            </div>
-          ) : (
-            // File checkbox
-            <input
-              type="checkbox"
-              checked={isFileSelected}
-              onChange={() => {}} // Handled by onClick
-              className="w-3 h-3 text-blue-400 border-gray-500 bg-gray-700 rounded focus:ring-blue-400 focus:ring-1"
-            />
-          )}
+          <Checkbox
+            checked={
+              item.type === 'directory'
+                ? allChildrenSelected
+                  ? true
+                  : someChildrenSelected
+                    ? 'indeterminate'
+                    : false
+                : isFileSelected
+            }
+            className="size-3.5"
+            aria-label={`Select ${item.name}`}
+            tabIndex={-1}
+          />
         </div>
 
         {/* Directory expand/collapse chevron */}
         {item.type === 'directory' && (
-          <span className="mr-1 text-gray-400">
+          <span className="mr-1 text-muted-foreground">
             {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
           </span>
         )}
         <span className="mr-2">{getFileIcon()}</span>
-        <span className={`text-xs ${item.isClickable ? 'text-gray-100' : 'text-gray-400'} ${item.metadata ? 'font-medium' : ''}`}>{item.name}</span>
+        <span className={`text-xs ${item.isClickable ? 'text-sidebar-foreground' : 'text-muted-foreground'} ${item.metadata ? 'font-medium' : ''}`}>{item.name}</span>
         {getFileTypeBadge()}
       </div>
       {isOpen && hasChildren && (
@@ -402,10 +393,10 @@ export default function FileExplorer({
   };
   
   return (
-    <div className="h-full flex flex-col bg-gray-900">
+    <div className="h-full flex flex-col bg-sidebar text-sidebar-foreground">
       {/* Header */}
-      <div className="p-3 border-b border-gray-700 bg-gray-900">
-        <h2 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+      <div className="p-3 border-b border-sidebar-border">
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Files
         </h2>
       </div>
@@ -418,14 +409,14 @@ export default function FileExplorer({
 
       {/* Selection Controls */}
       {fileTree.length > 0 && (
-        <div className="p-2 border-b border-gray-700 bg-gray-800">
+        <div className="p-2 border-b border-sidebar-border bg-sidebar-accent/50">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleSelectAll}
-                className="h-6 px-2 text-xs text-gray-300 hover:text-white hover:bg-gray-700"
+                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
               >
                 {selectedFilesArray.length === allFilePaths.length ? (
                   <>
@@ -445,7 +436,7 @@ export default function FileExplorer({
                   variant="ghost"
                   size="sm"
                   onClick={clearFileSelection}
-                  className="h-6 px-2 text-xs text-gray-300 hover:text-white hover:bg-gray-700"
+                  className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
                 >
                   <RotateCcw className="w-3 h-3 mr-1" />
                   Clear
@@ -453,7 +444,7 @@ export default function FileExplorer({
               )}
             </div>
             
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-muted-foreground">
               {selectedFilesArray.length} selected
             </span>
           </div>
@@ -463,7 +454,7 @@ export default function FileExplorer({
               variant="outline"
               size="sm"
               onClick={handleAddToIgnoreList}
-              className="w-full h-6 text-xs bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+              className="w-full h-6 text-xs"
             >
               <EyeOff className="w-3 h-3 mr-1" />
               Add to Ignore List
@@ -473,7 +464,7 @@ export default function FileExplorer({
       )}
       
       {/* File Tree */}
-      <ScrollArea className="flex-1 min-h-0 max-h-full overflow-y-auto bg-gray-900">
+      <ScrollArea className="flex-1 min-h-0 max-h-full overflow-y-auto">
         {fileTree.length > 0 ? (
           fileTree.map((item) => (
             <FileTreeItem
@@ -486,8 +477,8 @@ export default function FileExplorer({
           ))
         ) : (
           <div className="text-center py-8 px-4">
-            <p className="text-sm text-gray-400">No files to display</p>
-            <p className="text-xs text-gray-500 mt-2">Analyze a repository to see files</p>
+            <p className="text-sm text-muted-foreground">No files to display</p>
+            <p className="text-xs text-muted-foreground/70 mt-2">Analyze a repository to see files</p>
           </div>
         )}
       </ScrollArea>

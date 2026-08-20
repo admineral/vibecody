@@ -53,24 +53,34 @@ const ComponentTypeIcon = ({ type }: { type: ComponentType }) => {
   }
 };
 
-// Component badge colors based on type
+// Icon chip colors based on type
 const typeColors = {
-  [ComponentType.PAGE]: 'bg-blue-700',
-  [ComponentType.LAYOUT]: 'bg-violet-700', 
-  [ComponentType.COMPONENT]: 'bg-emerald-700',
-  [ComponentType.HOOK]: 'bg-orange-700',
-  [ComponentType.UTILITY]: 'bg-gray-700',
-  [ComponentType.CONTEXT]: 'bg-pink-700',
+  [ComponentType.PAGE]: 'bg-blue-600',
+  [ComponentType.LAYOUT]: 'bg-violet-600', 
+  [ComponentType.COMPONENT]: 'bg-emerald-600',
+  [ComponentType.HOOK]: 'bg-orange-600',
+  [ComponentType.UTILITY]: 'bg-gray-600',
+  [ComponentType.CONTEXT]: 'bg-pink-600',
 };
 
-// Text color based on type
+// Node border accent color based on type (real CSS colors, used in inline styles)
+const borderColors: Record<ComponentType, string> = {
+  [ComponentType.PAGE]: '#3b82f6',
+  [ComponentType.LAYOUT]: '#8b5cf6',
+  [ComponentType.COMPONENT]: '#10b981',
+  [ComponentType.HOOK]: '#f97316',
+  [ComponentType.UTILITY]: '#6b7280',
+  [ComponentType.CONTEXT]: '#ec4899',
+};
+
+// Type label badge colors, tuned for dark cards
 const textColors = {
-  [ComponentType.PAGE]: 'text-blue-900 bg-blue-50 border border-blue-200',
-  [ComponentType.LAYOUT]: 'text-violet-900 bg-violet-50 border border-violet-200',
-  [ComponentType.COMPONENT]: 'text-emerald-900 bg-emerald-50 border border-emerald-200',
-  [ComponentType.HOOK]: 'text-orange-900 bg-orange-50 border border-orange-200',
-  [ComponentType.UTILITY]: 'text-gray-900 bg-gray-50 border border-gray-200',
-  [ComponentType.CONTEXT]: 'text-pink-900 bg-pink-50 border border-pink-200',
+  [ComponentType.PAGE]: 'text-blue-300 bg-blue-500/15 border border-blue-500/30',
+  [ComponentType.LAYOUT]: 'text-violet-300 bg-violet-500/15 border border-violet-500/30',
+  [ComponentType.COMPONENT]: 'text-emerald-300 bg-emerald-500/15 border border-emerald-500/30',
+  [ComponentType.HOOK]: 'text-orange-300 bg-orange-500/15 border border-orange-500/30',
+  [ComponentType.UTILITY]: 'text-gray-300 bg-gray-500/15 border border-gray-500/30',
+  [ComponentType.CONTEXT]: 'text-pink-300 bg-pink-500/15 border border-pink-500/30',
 };
 
 // The component that renders the node
@@ -85,20 +95,20 @@ function ComponentNodeComponent({ data, selected }: NodeProps<{metadata: Compone
   
   return (
     <div 
-      className={`px-4 py-3 rounded-lg shadow-md bg-white transition-all ${
-        isSelected ? 'ring-2 ring-blue-600 shadow-lg' : ''
+      className={`px-4 py-3 rounded-lg bg-card text-card-foreground transition-all ${
+        isSelected ? 'ring-2 ring-ring shadow-lg' : ''
       }`}
       style={{ 
         width: 220, 
-        border: `2px solid ${typeColors[metadata.type].replace('bg-', '#')}`,
-        boxShadow: isSelected ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+        border: `2px solid ${borderColors[metadata.type]}`,
+        boxShadow: isSelected ? '0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3)' : '0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3)'
       }}
     >
       {/* Input handle */}
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-3 !h-3 !bg-gray-500 !border-2 !border-white"
+        className="!w-3 !h-3 !bg-muted-foreground !border-2 !border-card"
       />
       
       {/* Component header */}
@@ -112,13 +122,13 @@ function ComponentNodeComponent({ data, selected }: NodeProps<{metadata: Compone
       </div>
       
       {/* Component name */}
-      <div className="font-bold text-gray-900 truncate mb-1" title={metadata.name}>
+      <div className="font-bold truncate mb-1" title={metadata.name}>
         {metadata.name}
       </div>
       
       {/* Component description */}
       {metadata.description && (
-        <div className="text-xs text-gray-800 h-8 overflow-hidden" title={metadata.description}>
+        <div className="text-xs text-muted-foreground h-8 overflow-hidden" title={metadata.description}>
           {metadata.description.length > 60 
             ? `${metadata.description.substring(0, 57)}...` 
             : metadata.description}
@@ -126,17 +136,17 @@ function ComponentNodeComponent({ data, selected }: NodeProps<{metadata: Compone
       )}
       
       {/* Component metrics */}
-      <div className="flex justify-between mt-2 text-xs text-gray-700">
+      <div className="flex justify-between mt-2 text-xs text-muted-foreground">
         {propCount > 0 && (
           <div title={`${propCount} props`}>
-            <span className="font-medium text-gray-900">{propCount}</span> props
+            <span className="font-medium text-foreground">{propCount}</span> props
           </div>
         )}
         <div title={`Used by ${usedByCount} components`}>
-          <span className="font-medium text-gray-900">{usedByCount}</span> in
+          <span className="font-medium text-foreground">{usedByCount}</span> in
         </div>
         <div title={`Uses ${usesCount} components`}>
-          <span className="font-medium text-gray-900">{usesCount}</span> out
+          <span className="font-medium text-foreground">{usesCount}</span> out
         </div>
       </div>
       
@@ -144,7 +154,7 @@ function ComponentNodeComponent({ data, selected }: NodeProps<{metadata: Compone
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-3 !h-3 !bg-gray-500 !border-2 !border-white"
+        className="!w-3 !h-3 !bg-muted-foreground !border-2 !border-card"
       />
     </div>
   );

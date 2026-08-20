@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ComponentDataProvider } from "./lib/context/ComponentDataContext";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Component Visualization Tool",
-  description: "Visualize React components and their relationships",
+  title: "DocAI",
+  description: "Visualize the component architecture of any GitHub repository",
 };
 
 export default function RootLayout({
@@ -24,12 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <ComponentDataProvider>
-          {children}
+          <TooltipProvider>{children}</TooltipProvider>
         </ComponentDataProvider>
       </body>
     </html>

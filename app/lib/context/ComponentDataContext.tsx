@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ComponentMetadata } from '../types';
+import { loadLastBrowserCache, saveBrowserCache } from '../cache/browser';
 
 // Define the context shape
 interface ComponentDataContextType {
@@ -82,15 +83,9 @@ export function ComponentDataProvider({ children }: { children: ReactNode }) {
     }
     setIgnoredFiles(ignored);
 
-    // Restore the last analyzed repository so a refresh doesn't lose the graph
-    const savedComponents = localStorage.getItem('componentData');
-    if (savedComponents) {
-      try {
-        const parsed: ComponentMetadata[] = JSON.parse(savedComponents);
-        setComponents(parsed.filter(comp => !ignored.has(comp.file)));
-      } catch (error) {
-        console.error('Failed to parse component data from localStorage:', error);
-      }
+    const last = loadLastBrowserCache();
+    if (last?.components?.length) {
+      setComponents(last.components.filter(comp => !ignored.has(comp.file)));
     }
 
     setIsLoading(false);
@@ -112,7 +107,18 @@ export function ComponentDataProvider({ children }: { children: ReactNode }) {
     // Save to localStorage if available
     if (typeof window !== 'undefined') {
       if (newComponents.length > 0) {
-        localStorage.setItem('componentData', JSON.stringify(newComponents));
+        const last = loadLastBrowserCache();
+        saveBrowserCache({
+          version: last?.version ?? 'browser',
+          url: last?.url ?? '',
+          branch: last?.branch ?? 'main',
+          timestamp: new Date().toISOString(),
+          commitSha: last?.commitSha,
+          components: newComponents,
+          edges: last?.edges,
+          allFiles: last?.allFiles ?? [],
+          repository: last?.repository ?? { owner: '', name: '', branch: 'main' },
+        });
       } else {
         localStorage.removeItem('componentData');
       }

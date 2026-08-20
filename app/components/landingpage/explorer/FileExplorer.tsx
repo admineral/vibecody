@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from 'react';
-import { FileItem, ComponentType, ComponentMetadata } from '@/app/lib/types';
+import { FileItem, ComponentType, ComponentMetadata, findComponent } from '@/app/lib/types';
 import { useComponentData } from '@/app/lib/context/ComponentDataContext';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -349,14 +349,13 @@ export default function FileExplorer({
       : [];
   
   // Find the file path of the selected component
-  const selectedPath = selectedComponent 
-    ? components.find(c => c.name === selectedComponent)?.file || null
+  const selectedPath = selectedComponent
+    ? findComponent(components, selectedComponent)?.file || selectedComponent
     : null;
   
-  // Handle file selection
   const handleSelectFile = useCallback((file: FileItem) => {
     if (file.metadata) {
-      onSelectComponent(file.metadata.name);
+      onSelectComponent(file.metadata.file);
     }
   }, [onSelectComponent]);
 

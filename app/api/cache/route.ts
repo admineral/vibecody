@@ -13,6 +13,7 @@ export async function GET() {
         oldestFile: stats.oldestFile?.toISOString(),
         newestFile: stats.newestFile?.toISOString(),
         backend: stats.backend,
+        backends: stats.backends,
         ttlDays: stats.ttlDays,
         ephemeral: stats.ephemeral,
       }

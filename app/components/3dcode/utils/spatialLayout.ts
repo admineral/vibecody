@@ -1,5 +1,5 @@
 import { Vector3 } from 'three'
-import { ComponentMetadata, ComponentType } from '../../../lib/types'
+import { ComponentMetadata, ComponentType, findComponent } from '../../../lib/types'
 
 // Layer heights for different component types
 const LAYER_HEIGHTS = {
@@ -122,8 +122,8 @@ function applyGravitationalClustering(
       if (!pos1) return
       
       // Attraction to used components
-      comp.uses?.forEach(usedName => {
-        const usedComp = components.find(c => c.name === usedName)
+      comp.uses?.forEach(usedId => {
+        const usedComp = findComponent(components, usedId)
         if (usedComp && positions[usedComp.file]) {
           const pos2 = positions[usedComp.file]
           const diff = pos2.clone().sub(pos1)

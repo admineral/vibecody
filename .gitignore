@@ -26,6 +26,7 @@
 
 # cache
 /.cache
+component-analysis.json
 
 # debug
 npm-debug.log*

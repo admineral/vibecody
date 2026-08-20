@@ -10,13 +10,15 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { StatusMessage } from '@/app/lib/hooks/useAnalyzeRepo';
+import { clearBrowserCache } from '@/app/lib/cache/browser';
 
 interface CacheStats {
   totalFiles: number;
   totalSizeMB: number;
   oldestFile?: string;
   newestFile?: string;
-  backend?: 'kv' | 'filesystem';
+  backend?: 'supabase' | 'kv' | 'filesystem';
+  backends?: Array<'supabase' | 'kv' | 'filesystem'>;
   ttlDays?: number;
   ephemeral?: boolean;
 }
@@ -50,6 +52,7 @@ export default function CacheMenu({ onStatus }: CacheMenuProps) {
       const response = await fetch('/api/cache', { method: 'DELETE' });
       if (response.ok) {
         setStats({ totalFiles: 0, totalSizeMB: 0 });
+        clearBrowserCache();
         onStatus({ kind: 'success', text: 'Cache cleared successfully' });
       } else {
         onStatus({ kind: 'error', text: 'Failed to clear cache' });
@@ -97,14 +100,25 @@ export default function CacheMenu({ onStatus }: CacheMenuProps) {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Storage</span>
               <span className="font-medium">
-                {stats.backend === 'kv' ? 'Vercel KV' : 'Local disk'}
+                {stats.backend === 'supabase'
+                  ? 'Supabase'
+                  : stats.backend === 'kv'
+                    ? 'Vercel KV'
+                    : 'Local disk'}
               </span>
             </div>
             {stats.ephemeral && (
               <p className="text-xs text-muted-foreground">
-                Disk cache is wiped on each Vercel deploy and cold start. Add Upstash/Vercel KV
-                (`KV_REST_API_URL` + `KV_REST_API_TOKEN`) to keep repos for {stats.ttlDays ?? 30} days,
-                or until the commit SHA changes.
+                Disk cache is wiped on each Vercel deploy and cold start. Add Supabase
+                (`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`) or Vercel KV to keep repos for{' '}
+                {stats.ttlDays ?? 30} days, or until the commit SHA changes. This browser still
+                keeps the last graph in localStorage.
+              </p>
+            )}
+            {!stats.ephemeral && stats.backend === 'filesystem' && (
+              <p className="text-xs text-muted-foreground">
+                Using the local `.cache` folder. Add Supabase for a shared durable cache across
+                deploys. The last analyzed graph is also saved in this browser.
               </p>
             )}
             <div className="border-t pt-3">

@@ -13,6 +13,7 @@ import UniverseView from './components/workspace/UniverseView';
 import { useComponentGraph } from './lib/hooks/useComponentGraph';
 import { useComponentData } from './lib/context/ComponentDataContext';
 import { useAnalyzeRepo, DEFAULT_REPO_URL } from './lib/hooks/useAnalyzeRepo';
+import { findComponent } from './lib/types';
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -40,7 +41,7 @@ export default function Home() {
   const { analyzeRepository, isAnalyzing, status, setStatus, allFiles } = useAnalyzeRepo();
 
   const selectedComponent = selectedNode
-    ? components.find(c => c.name === selectedNode) || null
+    ? findComponent(components, selectedNode) || null
     : null;
 
   if (isLoading) {

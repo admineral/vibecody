@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { ComponentMetadata, ComponentType } from '@/app/lib/types';
+import { ComponentMetadata, ComponentType, findComponent } from '@/app/lib/types';
 import CodeViewer from './CodeViewer';
 
 interface TypeBadgeProps {
@@ -65,12 +65,12 @@ export default function PropertiesPanel({
   }
   
   // Get related components (uses and usedBy)
-  const uses = component.uses?.map(name => 
-    relatedComponents.find(c => c.name === name)
+  const uses = component.uses?.map(id =>
+    findComponent(relatedComponents, id)
   ).filter(Boolean) as ComponentMetadata[];
   
-  const usedBy = component.usedBy?.map(name => 
-    relatedComponents.find(c => c.name === name)
+  const usedBy = component.usedBy?.map(id =>
+    findComponent(relatedComponents, id)
   ).filter(Boolean) as ComponentMetadata[];
   
   return (
@@ -219,9 +219,9 @@ export default function PropertiesPanel({
                 <div className="grid grid-cols-1 gap-2">
                   {uses.map((usedComponent) => (
                     <button
-                      key={usedComponent.name}
+                      key={usedComponent.file}
                       className="flex items-center p-2 bg-card rounded-md hover:bg-accent transition-colors text-left border"
-                      onClick={() => onSelectComponent(usedComponent.name)}
+                      onClick={() => onSelectComponent(usedComponent.file)}
                     >
                       <TypeBadge type={usedComponent.type} />
                       <span className="ml-2 text-sm font-medium">{usedComponent.name}</span>
@@ -237,9 +237,9 @@ export default function PropertiesPanel({
                 <div className="grid grid-cols-1 gap-2">
                   {usedBy.map((parentComponent) => (
                     <button
-                      key={parentComponent.name}
+                      key={parentComponent.file}
                       className="flex items-center p-2 bg-card rounded-md hover:bg-accent transition-colors text-left border"
-                      onClick={() => onSelectComponent(parentComponent.name)}
+                      onClick={() => onSelectComponent(parentComponent.file)}
                     >
                       <TypeBadge type={parentComponent.type} />
                       <span className="ml-2 text-sm font-medium">{parentComponent.name}</span>

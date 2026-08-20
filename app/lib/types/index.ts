@@ -10,12 +10,48 @@ export enum ComponentType {
   CONTEXT = 'context',
 }
 
+export interface ImportSpec {
+  name: string;
+  source: string;
+  isDefault?: boolean;
+  isNamespace?: boolean;
+}
+
+export type GraphEdgeKind = 'imports' | 'reexports';
+
+export interface GraphEdge {
+  from: string;
+  to: string;
+  kind: GraphEdgeKind;
+  specifier?: string;
+}
+
+export interface CodeGraph {
+  nodes: ComponentMetadata[];
+  edges: GraphEdge[];
+}
+
+/** Stable graph id: normalized file path (one analyzed entity per file). */
+export function nodeId(component: Pick<ComponentMetadata, 'file'>): string {
+  return component.file.replace(/\\/g, '/');
+}
+
+export function findComponent(
+  components: ComponentMetadata[],
+  idOrName: string | null | undefined
+): ComponentMetadata | undefined {
+  if (!idOrName) return undefined;
+  return components.find((c) => nodeId(c) === idOrName || c.name === idOrName);
+}
+
 // Component metadata with all the info we extract
 export interface ComponentMetadata {
   name: string;
   description?: string;
   type: ComponentType;
+  /** Outgoing edges: target node ids (file paths). Legacy caches may store names. */
   uses?: string[];
+  /** Incoming edges: source node ids (file paths). */
   usedBy?: string[];
   props?: PropMetadata[];
   file: string;
@@ -23,6 +59,7 @@ export interface ComponentMetadata {
   content?: string;
   isClientComponent?: boolean;
   isServerComponent?: boolean;
+  importSpecs?: ImportSpec[];
   dynamicImports?: string[];
   metadata?: {
     runtime?: 'nodejs' | 'edge';

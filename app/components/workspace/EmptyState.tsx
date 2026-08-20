@@ -1,5 +1,7 @@
-import { Boxes } from 'lucide-react';
+import Link from 'next/link';
+import { Boxes, Gamepad2 } from 'lucide-react';
 import { DEFAULT_REPO_URL } from '@/app/lib/hooks/useAnalyzeRepo';
+import { Button } from '@/components/ui/button';
 
 export default function EmptyState() {
   return (
@@ -19,6 +21,12 @@ export default function EmptyState() {
             {DEFAULT_REPO_URL}
           </code>
         </p>
+        <Button asChild className="mt-4">
+          <Link href="/swarm">
+            <Gamepad2 />
+            Play Swarm City
+          </Link>
+        </Button>
       </div>
     </div>
   );

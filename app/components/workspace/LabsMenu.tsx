@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Box, Code2, FlaskConical, FolderTree, Globe, LayoutGrid } from 'lucide-react';
+import { Box, Code2, FlaskConical, FolderTree, Gamepad2, Globe, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ const LABS_LINKS = [
   { href: '/codesandbox2', label: 'CodeSandbox', icon: Code2 },
   { href: '/3dsandbox', label: '3D Sandbox', icon: LayoutGrid },
   { href: '/3dfiletree-v2', label: '3D File Tree', icon: FolderTree },
+  { href: '/swarm', label: 'Swarm City (Mobile)', icon: Gamepad2 },
 ];
 
 export default function LabsMenu() {

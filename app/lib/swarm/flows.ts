@@ -1,0 +1,118 @@
+import type { MissionFlow } from './types'
+
+/**
+ * Hardcoded agent flows in the spirit of Vercel AI SDK `simulateReadableStream`
+ * / MockLanguageModel — replayable tool-call scripts, no live model, no API.
+ */
+export const MISSIONS: MissionFlow[] = [
+  {
+    id: 'auth-leak',
+    title: 'Auth Leak',
+    blurb: 'Scout finds a hole in auth.ts. Fixer patches. Scribe grows SessionGuard.',
+    duration: 28000,
+    loop: true,
+    steps: [
+      { at: 200, agent: 'lead', kind: 'talk', message: 'Swarm: close the session hole before deploy.', tool: 'orchestrate({ mission: "auth-leak" })' },
+      { at: 900, agent: 'scout', kind: 'fly', targetId: 'auth-api', message: 'En route to api/auth.ts' },
+      { at: 2800, agent: 'scout', kind: 'scan', targetId: 'auth-api', message: 'Cookie is never httpOnly.', tool: 'scanFile("app/api/auth.ts")' },
+      { at: 4200, agent: 'fixer', kind: 'fly', targetId: 'auth-api', message: 'Fixer locking onto the red tower' },
+      { at: 6200, agent: 'fixer', kind: 'fix', targetId: 'auth-api', message: 'Set httpOnly + sameSite=lax', tool: 'applyPatch({ file: "auth.ts" })', code: 'cookies().set("sid", token, {\n  httpOnly: true,\n  sameSite: "lax",\n})' },
+      { at: 7800, agent: 'scribe', kind: 'fly', targetId: 'header', message: 'Need a guard in the UI district' },
+      { at: 9800, agent: 'scribe', kind: 'spawn', targetId: 'session-guard', spawnId: 'session-guard', message: 'New module SessionGuard.tsx', tool: 'writeFile("components/SessionGuard.tsx")', code: 'export function SessionGuard({ children }) {\n  if (!session) redirect("/login")\n  return children\n}' },
+      { at: 11800, agent: 'architect', kind: 'fly', targetId: 'session-guard', message: 'Raising the guard tower' },
+      { at: 13800, agent: 'architect', kind: 'grow', targetId: 'session-guard', growBy: 1.6, message: 'Tower +1.6 — exports wired' },
+      { at: 15200, agent: 'scribe', kind: 'edit', targetId: 'layout', message: 'Wrap root layout with the guard', tool: 'editFile("app/layout.tsx")', code: 'export default function RootLayout({ children }) {\n  return <SessionGuard>{children}</SessionGuard>\n}' },
+      { at: 17200, agent: 'lead', kind: 'link', targetId: 'session-guard', linkTo: 'layout', message: 'Import edge: SessionGuard → layout' },
+      { at: 19000, agent: 'scout', kind: 'scan', targetId: 'layout', message: 'Re-scan layout. Guard holds.', tool: 'verify({ file: "layout.tsx" })' },
+      { at: 21000, agent: 'lead', kind: 'talk', message: 'Auth leak closed. Swarm idle until loop.' },
+    ],
+  },
+  {
+    id: 'dashboard-drop',
+    title: 'Dashboard Drop',
+    blurb: 'Architect drops a new page block. Scribe fills it. Scout verifies the graph.',
+    duration: 24000,
+    loop: true,
+    steps: [
+      { at: 200, agent: 'lead', kind: 'talk', message: 'Ship a metrics dashboard. No API — simulated drop.' },
+      { at: 1000, agent: 'architect', kind: 'fly', targetId: 'page', message: 'Surveying app/ district' },
+      { at: 2800, agent: 'architect', kind: 'spawn', targetId: 'dashboard', spawnId: 'dashboard', message: 'New city block: dashboard/page.tsx', tool: 'writeFile("app/dashboard/page.tsx")' },
+      { at: 4600, agent: 'architect', kind: 'grow', targetId: 'dashboard', growBy: 2.2, message: 'Page tower rising' },
+      { at: 6200, agent: 'scribe', kind: 'fly', targetId: 'dashboard', message: 'Scribe docking at the empty floor' },
+      { at: 8200, agent: 'scribe', kind: 'edit', targetId: 'dashboard', message: 'Scaffolding MetricsGrid', tool: 'streamText({ prompt: "dashboard" })', code: 'export default function Dashboard() {\n  return <MetricsGrid sources={["analyze","cache"]} />\n}' },
+      { at: 10200, agent: 'fixer', kind: 'fly', targetId: 'analyze-api', message: 'Need a metrics endpoint shape' },
+      { at: 12200, agent: 'fixer', kind: 'edit', targetId: 'analyze-api', message: 'Expose summary counts', tool: 'applyPatch({ file: "analyze-repo" })', code: 'export async function POST(req: Request) {\n  const graph = await analyze(await req.json())\n  return Response.json({ nodes: graph.length, ok: true })\n}' },
+      { at: 14200, agent: 'lead', kind: 'link', targetId: 'dashboard', linkTo: 'analyze-api', message: 'Dashboard ← analyze-repo' },
+      { at: 16200, agent: 'scout', kind: 'scan', targetId: 'dashboard', message: 'Graph is acyclic. Drop complete.' },
+      { at: 18000, agent: 'lead', kind: 'talk', message: 'Dashboard is live in the city.' },
+    ],
+  },
+  {
+    id: 'circular-hunt',
+    title: 'Circular Hunt',
+    blurb: 'Scout traces a cache ↔ analyzer loop. Fixer cuts it. Trails stay like Gource.',
+    duration: 26000,
+    loop: true,
+    steps: [
+      { at: 200, agent: 'lead', kind: 'talk', message: 'Cycle alarm in lib/. Hunt it.' },
+      { at: 800, agent: 'scout', kind: 'fly', targetId: 'ast', message: 'Entering ast-analyzer.ts' },
+      { at: 2600, agent: 'scout', kind: 'scan', targetId: 'ast', message: 'Imports cache.ts', tool: 'scanFile("lib/parser/ast-analyzer.ts")' },
+      { at: 4000, agent: 'scout', kind: 'fly', targetId: 'cache', message: 'Following the import' },
+      { at: 5800, agent: 'scout', kind: 'scan', targetId: 'cache', message: 'cache.ts imports ast-analyzer. Cycle.', tool: 'report({ issue: "circular" })' },
+      { at: 7200, agent: 'fixer', kind: 'fly', targetId: 'cache', message: 'Fixer on the red util' },
+      { at: 9200, agent: 'fixer', kind: 'fix', targetId: 'cache', message: 'Extract types; drop analyzer import', tool: 'applyPatch({ file: "cache.ts" })', code: 'export function readCache(key: string) {\n  return localStorage.getItem(key)\n  // no analyzer import\n}' },
+      { at: 11200, agent: 'scribe', kind: 'edit', targetId: 'types', message: 'Move shared types out of the loop', tool: 'editFile("lib/types/index.ts")', code: 'export interface CacheEntry {\n  key: string\n  graph: ComponentMetadata[]\n}' },
+      { at: 13200, agent: 'architect', kind: 'grow', targetId: 'types', growBy: 0.8, message: 'Types tower absorbs the contract' },
+      { at: 15000, agent: 'lead', kind: 'link', targetId: 'cache', linkTo: 'types', message: 'cache → types (acyclic)' },
+      { at: 16800, agent: 'scout', kind: 'scan', targetId: 'ast', message: 'Second pass: cycle gone.' },
+      { at: 18800, agent: 'lead', kind: 'talk', message: 'Hunt complete. Trails stay as history.' },
+    ],
+  },
+  {
+    id: 'ui-refactor',
+    title: 'UI District',
+    blurb: 'Whole swarm on components/. Cards get rewritten, towers stretch.',
+    duration: 25000,
+    loop: true,
+    steps: [
+      { at: 200, agent: 'lead', kind: 'talk', message: 'Refactor the UI district. Five drones, one neighborhood.' },
+      { at: 900, agent: 'scout', kind: 'fly', targetId: 'filecard', message: 'Mapping FileCard3D' },
+      { at: 2400, agent: 'scribe', kind: 'fly', targetId: 'filecard', message: 'Scribe pairing on the card shader' },
+      { at: 4200, agent: 'scribe', kind: 'edit', targetId: 'filecard', message: 'Instanced windows, cheaper on mobile', tool: 'editFile("FileCard3D.tsx")', code: 'const FileCard3D = memo(({ component }) => {\n  return <RoundedBox args={[1.6, 2.2, 0.08]} />\n})' },
+      { at: 6000, agent: 'architect', kind: 'grow', targetId: 'filecard', growBy: 1.1, message: 'Card tower stretches' },
+      { at: 7600, agent: 'fixer', kind: 'fly', targetId: 'agent', message: 'ModularAgent leaks setState in useFrame' },
+      { at: 9600, agent: 'fixer', kind: 'edit', targetId: 'agent', message: 'Move status to a ref', tool: 'applyPatch({ file: "ModularAgent.tsx" })', code: 'useFrame((_, dt) => {\n  group.position.lerp(target, 1 - Math.exp(-dt * 4))\n})' },
+      { at: 11600, agent: 'scout', kind: 'scan', targetId: 'universe-view', message: 'UniverseView still mounts one agent' },
+      { at: 13200, agent: 'scribe', kind: 'edit', targetId: 'universe-view', message: 'Note: swarm lives on /swarm now', tool: 'editFile("UniverseView.tsx")' },
+      { at: 15000, agent: 'architect', kind: 'grow', targetId: 'labs', growBy: 0.6, message: 'Labs menu gets Swarm City' },
+      { at: 16800, agent: 'lead', kind: 'link', targetId: 'labs', linkTo: 'swarm-page', message: 'Labs → /swarm' },
+      { at: 18600, agent: 'lead', kind: 'talk', message: 'UI district humming. Loop.' },
+    ],
+  },
+  {
+    id: 'night-expand',
+    title: 'Night Expand',
+    blurb: 'After dark the API district grows. Users route appears. Swarm lead rides shotgun.',
+    duration: 27000,
+    loop: true,
+    steps: [
+      { at: 200, agent: 'lead', kind: 'talk', message: 'Night shift. Expand the API block.' },
+      { at: 1000, agent: 'scout', kind: 'fly', targetId: 'analyze-api', message: 'Perimeter scan of api/' },
+      { at: 2800, agent: 'scout', kind: 'scan', targetId: 'file-api', message: 'file-content is a dead-end leaf' },
+      { at: 4200, agent: 'architect', kind: 'spawn', targetId: 'users-api', spawnId: 'users-api', message: 'New tower: users.ts', tool: 'writeFile("app/api/users.ts")' },
+      { at: 6200, agent: 'architect', kind: 'grow', targetId: 'users-api', growBy: 2.4, message: 'Users tower from the asphalt' },
+      { at: 8000, agent: 'scribe', kind: 'edit', targetId: 'users-api', message: 'List + filter endpoints', tool: 'streamText({ prompt: "users api" })', code: 'export async function GET() {\n  return Response.json(await listUsers())\n}' },
+      { at: 10000, agent: 'fixer', kind: 'fly', targetId: 'auth-api', message: 'Auth still red from last night?' },
+      { at: 11800, agent: 'fixer', kind: 'fix', targetId: 'auth-api', message: 'Re-seal cookies, lock CORS', tool: 'applyPatch({ file: "auth.ts" })', code: 'export async function POST() {\n  return NextResponse.json({ ok: true, locked: true })\n}' },
+      { at: 13800, agent: 'lead', kind: 'link', targetId: 'users-api', linkTo: 'auth-api', message: 'users.ts behind auth' },
+      { at: 15600, agent: 'scribe', kind: 'spawn', targetId: 'swarm-page', spawnId: 'swarm-page', message: 'And the game itself: swarm/page.tsx', tool: 'writeFile("app/swarm/page.tsx")' },
+      { at: 17600, agent: 'architect', kind: 'grow', targetId: 'swarm-page', growBy: 1.8, message: 'Mobile game tower online' },
+      { at: 19600, agent: 'scout', kind: 'scan', targetId: 'swarm-page', message: 'City sees itself. Very meta.' },
+      { at: 21400, agent: 'lead', kind: 'talk', message: 'Night expand complete. Sleep / loop.' },
+    ],
+  },
+]
+
+export function getMission(id: string) {
+  return MISSIONS.find((m) => m.id === id) ?? MISSIONS[0]
+}

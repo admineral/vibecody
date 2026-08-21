@@ -97,8 +97,8 @@ export default function MobileHUD({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/55 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/70 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/50 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/55 to-transparent" />
 
       <div
         className="absolute inset-x-0 top-0 px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
@@ -127,18 +127,18 @@ export default function MobileHUD({
         <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md"
+            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md"
             aria-label="Back"
           >
             <ChevronLeft className="h-5 w-5" />
           </Link>
-          <p className="text-[11px] font-medium tracking-wide text-white/80">
-            {mission?.title}
+          <p className="text-[11px] font-medium tracking-[0.18em] text-white/70">
+            {theme.label.toUpperCase()}
           </p>
           <button
             type="button"
             onClick={() => onPlaying(!playing)}
-            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md"
+            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md"
             aria-label={playing ? 'Pause' : 'Play'}
           >
             {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -159,7 +159,7 @@ export default function MobileHUD({
               type="button"
               onClick={() => onCamera(item.id)}
               className={`pointer-events-auto flex h-11 w-11 flex-col items-center justify-center rounded-full text-white shadow-[0_0_16px_rgba(0,0,0,0.45)] backdrop-blur-md ${
-                active ? 'bg-fuchsia-500' : 'bg-black/45'
+                active ? 'bg-cyan-500' : 'border border-white/10 bg-white/10'
               }`}
               aria-label={item.label}
             >
@@ -171,7 +171,7 @@ export default function MobileHUD({
         <button
           type="button"
           onClick={onResetView}
-          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md"
+          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md"
           aria-label="Reset view"
         >
           <RotateCcw className="h-4 w-4" />
@@ -180,7 +180,7 @@ export default function MobileHUD({
           type="button"
           onClick={() => onHd(!hd)}
           className={`pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full text-[10px] font-bold backdrop-blur-md ${
-            hd ? 'bg-fuchsia-500 text-white' : 'bg-black/45 text-white'
+            hd ? 'bg-cyan-500 text-white' : 'border border-white/10 bg-white/10 text-white'
           }`}
           aria-label="Toggle HD"
         >
@@ -220,7 +220,7 @@ export default function MobileHUD({
         <button
           type="button"
           onClick={() => setSheet('log')}
-          className="pointer-events-auto mt-1 flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md"
+          className="pointer-events-auto mt-1 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md"
           aria-label="Dev log"
         >
           <Terminal className="h-5 w-5" />
@@ -228,7 +228,7 @@ export default function MobileHUD({
         <button
           type="button"
           onClick={() => setSheet('menu')}
-          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md"
+          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md"
           aria-label="Game menu"
         >
           <SlidersHorizontal className="h-5 w-5" />
@@ -238,7 +238,7 @@ export default function MobileHUD({
       <div className="absolute inset-x-0 bottom-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pr-16">
         {hint && (
           <p className="pointer-events-none mb-2 max-w-[78%] rounded-full bg-black/55 px-3 py-1.5 text-[11px] text-white backdrop-blur-md">
-            Drag to look · tap a tile to flip it up · tap again to expand
+            Drag to look · tap a module to inspect · tap again for the live sandbox
           </p>
         )}
         <div className="pointer-events-auto max-w-[78%]" onPointerDown={trapPointer}>
@@ -247,13 +247,14 @@ export default function MobileHUD({
             <span className="ml-2 text-[11px] font-normal text-white/60">{followed?.version}</span>
           </p>
           {repoName && (
-            <p className="text-[10px] text-fuchsia-200/80">
+            <p className="text-[10px] text-cyan-200/80">
               {liveRepo ? 'live' : 'synthetic'} · {repoName}
             </p>
           )}
           <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-white/90">
             {activeAgent?.status ?? mission?.blurb}
           </p>
+          <p className="mt-1 max-w-[78%] text-[10px] tracking-wide text-white/45">{theme.tagline}</p>
         </div>
       </div>
 
@@ -264,11 +265,11 @@ export default function MobileHUD({
         >
           <button
             type="button"
-            className="absolute inset-0 bg-black/45"
+            className="absolute inset-0 border border-white/10 bg-white/10"
             aria-label="Close sheet"
             onClick={() => setSheet('none')}
           />
-          <div className="relative max-h-[55dvh] overflow-auto rounded-t-3xl bg-[#0b0b12] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-white">
+          <div className="relative max-h-[55dvh] overflow-auto rounded-t-3xl border-t border-white/10 bg-[#0b0f14] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-white">
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/25" />
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-semibold">
@@ -306,8 +307,9 @@ export default function MobileHUD({
                         key={version.id}
                         type="button"
                         onClick={() => onVersion(version.id)}
+                        title={version.tagline}
                         className={`rounded-full px-3 py-1.5 text-xs ${
-                          theme.id === version.id ? 'bg-fuchsia-500' : 'bg-white/10'
+                          theme.id === version.id ? 'bg-cyan-500' : 'bg-white/10'
                         }`}
                       >
                         {version.label}
@@ -355,7 +357,7 @@ export default function MobileHUD({
                         type="button"
                         onClick={() => onCamera(item.id)}
                         className={`rounded-full px-3 py-1.5 text-xs capitalize ${
-                          cameraMode === item.id ? 'bg-fuchsia-500' : 'bg-white/10'
+                          cameraMode === item.id ? 'bg-cyan-500' : 'bg-white/10'
                         }`}
                       >
                         {label}
@@ -381,7 +383,7 @@ export default function MobileHUD({
                     step={0.1}
                     value={speed}
                     onChange={(e) => onSpeed(Number(e.target.value))}
-                    className="flex-1 accent-fuchsia-400"
+                    className="flex-1 accent-cyan-400"
                   />
                   <span className="w-8 text-right font-mono">{speed.toFixed(1)}</span>
                 </label>

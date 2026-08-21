@@ -4,7 +4,7 @@ import SwarmGame from '@/app/components/swarm/SwarmGame'
 export const metadata: Metadata = {
   title: 'Swarm City — DocAI',
   description:
-    'Mobile 3D game: five simulated agents fly a code city, patch modules, and expand the repo — Gource trails, no API.',
+    'A professional 3D code universe: agents scan modules, lift coding cards, and open live CodeSandbox previews.',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -18,7 +18,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#87ceeb',
+  themeColor: '#0b0f14',
 }
 
 export default function SwarmPage() {

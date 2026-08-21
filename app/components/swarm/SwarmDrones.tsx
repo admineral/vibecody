@@ -91,7 +91,7 @@ function Drone({
     groupRefs.current[def.id] = g
   })
 
-  const size = theme.chipMode ? (highlighted ? 0.2 : 0.14) : highlighted ? 0.38 : 0.3
+  const size = theme.chipMode ? (highlighted ? 0.2 : 0.14) : highlighted ? 0.32 : 0.24
 
   return (
     <group
@@ -101,37 +101,41 @@ function Drone({
         onSelect()
       }}
     >
-      <Trail width={highlighted ? 1.6 : 0.9} length={theme.chipMode ? 14 : theme.nodeMode ? 18 : 8} color={def.color} attenuation={(w) => w * 0.45}>
-        <mesh>
-          <icosahedronGeometry args={[size, theme.chipMode ? 1 : 0]} />
+      <Trail width={highlighted ? 1.1 : 0.55} length={theme.chipMode ? 14 : theme.nodeMode ? 18 : 7} color={def.color} attenuation={(w) => w * 0.4}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <capsuleGeometry args={[size * 0.28, size * 0.9, 4, 10]} />
           <meshStandardMaterial
-            color={def.color}
+            color="#e8eef7"
             emissive={def.color}
-            emissiveIntensity={1.1}
-            metalness={0.7}
+            emissiveIntensity={0.55}
+            metalness={0.72}
             roughness={0.18}
           />
         </mesh>
       </Trail>
+      <mesh rotation={[0, 0, 0.1]}>
+        <boxGeometry args={[size * 1.7, 0.02, size * 0.55]} />
+        <meshStandardMaterial color={def.color} metalness={0.6} roughness={0.22} emissive={def.color} emissiveIntensity={0.35} />
+      </mesh>
       <mesh>
-        <sphereGeometry args={[size * 0.45, 8, 8]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.85} />
+        <sphereGeometry args={[size * 0.18, 12, 12]} />
+        <meshBasicMaterial color="#f8fafc" />
       </mesh>
       {!theme.chipMode && (
         <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[size * 1.6, size * 1.85, 20]} />
-          <meshBasicMaterial color={def.color} transparent opacity={runtime?.beam ? 0.7 : 0.2} />
+          <ringGeometry args={[size * 1.15, size * 1.28, 32]} />
+          <meshBasicMaterial color={def.color} transparent opacity={runtime?.beam ? 0.55 : 0.12} />
         </mesh>
       )}
       {runtime?.beam && !theme.chipMode && (
-        <mesh position={[0, theme.cardMode ? -0.7 : -1.2, theme.cardMode ? -0.2 : 0]} rotation={theme.cardMode ? [0.4, 0, 0] : [0, 0, 0]}>
-          <cylinderGeometry args={[0.03, 0.18, theme.cardMode ? 1.3 : 2.4, 8]} />
-          <meshBasicMaterial color={def.color} transparent opacity={0.35} />
+        <mesh position={[0, theme.cardMode ? -0.55 : -1.05, theme.cardMode ? -0.12 : 0]} rotation={theme.cardMode ? [0.35, 0, 0] : [0, 0, 0]}>
+          <cylinderGeometry args={[0.012, 0.09, theme.cardMode ? 1.05 : 2.1, 10]} />
+          <meshBasicMaterial color={def.color} transparent opacity={0.28} />
         </mesh>
       )}
       <AgentEnergy color={def.color} kind={runtime?.kind ?? 'idle'} active={Boolean(runtime?.beam)} hd={hd} />
       {(!compact || highlighted) && (
-        <Text position={[0, size + 0.32, 0]} fontSize={0.18} color={def.color} anchorX="center">
+        <Text position={[0, size + 0.22, 0]} fontSize={0.12} color={def.color} anchorX="center">
           {def.glyph}
         </Text>
       )}

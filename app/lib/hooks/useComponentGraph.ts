@@ -7,7 +7,9 @@ import {
   ComponentNode, 
   ComponentEdge, 
   ComponentType,
-  CanvasState
+  CanvasState,
+  nodeId,
+  findComponent,
 } from '../types';
 
 // Color scheme for different component types
@@ -26,35 +28,37 @@ function findComponentClusters(components: ComponentMetadata[]): ComponentMetada
   const clusters: ComponentMetadata[][] = [];
   
   const componentMap = new Map<string, ComponentMetadata>();
-  components.forEach(comp => componentMap.set(comp.name, comp));
+  components.forEach(comp => componentMap.set(nodeId(comp), comp));
   
   // Build adjacency list for undirected graph
   const adjacency = new Map<string, Set<string>>();
   components.forEach(comp => {
-    adjacency.set(comp.name, new Set());
+    adjacency.set(nodeId(comp), new Set());
   });
   
   components.forEach(comp => {
-    // Add connections for both 'uses' and 'usedBy'
+    const from = nodeId(comp);
     (comp.uses || []).forEach(target => {
-      if (adjacency.has(target)) {
-        adjacency.get(comp.name)?.add(target);
-        adjacency.get(target)?.add(comp.name);
+      const match = findComponent(components, target);
+      if (!match) return;
+      const to = nodeId(match);
+      if (adjacency.has(to)) {
+        adjacency.get(from)?.add(to);
+        adjacency.get(to)?.add(from);
       }
     });
   });
   
   // DFS to find connected components
-  function dfs(componentName: string, cluster: ComponentMetadata[]) {
-    if (visited.has(componentName)) return;
-    visited.add(componentName);
+  function dfs(id: string, cluster: ComponentMetadata[]) {
+    if (visited.has(id)) return;
+    visited.add(id);
     
-    const component = componentMap.get(componentName);
+    const component = componentMap.get(id);
     if (component) {
       cluster.push(component);
       
-      // Visit all connected components
-      adjacency.get(componentName)?.forEach(neighbor => {
+      adjacency.get(id)?.forEach(neighbor => {
         if (!visited.has(neighbor)) {
           dfs(neighbor, cluster);
         }
@@ -62,11 +66,11 @@ function findComponentClusters(components: ComponentMetadata[]): ComponentMetada
     }
   }
   
-  // Find all clusters
   components.forEach(comp => {
-    if (!visited.has(comp.name)) {
+    const id = nodeId(comp);
+    if (!visited.has(id)) {
       const cluster: ComponentMetadata[] = [];
-      dfs(comp.name, cluster);
+      dfs(id, cluster);
       if (cluster.length > 0) {
         clusters.push(cluster);
       }
@@ -95,7 +99,7 @@ function layoutCluster(
   const positions: Record<string, XYPosition> = {};
   
   if (cluster.length === 1) {
-    positions[cluster[0].name] = clusterCenter;
+    positions[nodeId(cluster[0])] = clusterCenter;
     return positions;
   }
   
@@ -129,7 +133,7 @@ function layoutCluster(
     
     if (typeIndex === 0 && components.length === 1) {
       // Place single page at center
-      positions[components[0].name] = clusterCenter;
+      positions[nodeId(components[0])] = clusterCenter;
       currentRadius = Math.max(100, clusterRadius * 0.3);
       return;
     }
@@ -140,7 +144,7 @@ function layoutCluster(
     
     components.forEach((comp, i) => {
       const angle = i * angleStep;
-      positions[comp.name] = {
+      positions[nodeId(comp)] = {
         x: clusterCenter.x + radius * Math.cos(angle),
         y: clusterCenter.y + radius * Math.sin(angle)
       };
@@ -192,10 +196,11 @@ function createNodesFromComponents(
   positions: Record<string, XYPosition>
 ): ComponentNode[] {
   return components.map((component): ComponentNode => {
-    const position = positions[component.name] || { x: 0, y: 0 };
+    const id = nodeId(component);
+    const position = positions[id] || { x: 0, y: 0 };
     
     return {
-      id: component.name,
+      id,
       type: 'component',
       position,
       data: {
@@ -214,12 +219,15 @@ function createEdgesFromComponents(components: ComponentMetadata[]): ComponentEd
   const edges: ComponentEdge[] = [];
   
   components.forEach(component => {
-    // Create edges for components this component uses
+    const from = nodeId(component);
     (component.uses || []).forEach(target => {
+      const match = findComponent(components, target);
+      if (!match) return;
+      const to = nodeId(match);
       edges.push({
-        id: `${component.name}-uses-${target}`,
-        source: component.name,
-        target,
+        id: `${from}-uses-${to}`,
+        source: from,
+        target: to,
         type: 'smoothstep',
         animated: true,
         markerEnd: {
@@ -292,15 +300,15 @@ export function useComponentGraph(initialComponents: ComponentMetadata[] = []) {
   }, [components, setComponentsAndRegenerateGraph]);
   
   // Remove a component
-  const removeComponent = useCallback((componentName: string) => {
-    const newComponents = components.filter(c => c.name !== componentName);
+  const removeComponent = useCallback((componentId: string) => {
+    const newComponents = components.filter(c => nodeId(c) !== componentId && c.name !== componentId);
     setComponentsAndRegenerateGraph(newComponents);
   }, [components, setComponentsAndRegenerateGraph]);
   
   // Update a component
   const updateComponent = useCallback((updatedComponent: ComponentMetadata) => {
     const newComponents = components.map(c => 
-      c.name === updatedComponent.name ? updatedComponent : c
+      c.file === updatedComponent.file ? updatedComponent : c
     );
     setComponentsAndRegenerateGraph(newComponents);
   }, [components, setComponentsAndRegenerateGraph]);

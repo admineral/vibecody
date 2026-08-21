@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
-import { ComponentMetadata } from '@/app/lib/types';
+import { ComponentMetadata, findComponent } from '@/app/lib/types';
 
 const CodeUniverse3D = dynamic(() => import('@/app/components/3dcode/CodeUniverse3D'), {
   ssr: false,
@@ -39,15 +39,10 @@ export default function UniverseView({
   const [agentsEnabled, setAgentsEnabled] = useState(true);
   const [agentSpeed, setAgentSpeed] = useState(0.3);
 
-  const selectedFile = components.find((c) => c.name === selectedComponentName)?.file ?? null;
+  const selectedFile = findComponent(components, selectedComponentName)?.file ?? null;
 
   const handleSelectFile = (file: string | null) => {
-    if (!file) {
-      onSelectComponent(null);
-      return;
-    }
-    const match = components.find((c) => c.file === file);
-    onSelectComponent(match?.name ?? null);
+    onSelectComponent(file);
   };
 
   return (

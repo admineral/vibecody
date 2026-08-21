@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "analyze:local": "tsx scripts/analyze-local.ts"
+    "analyze:local": "tsx scripts/analyze-local.ts",
+    "test:resolver": "tsx scripts/test-import-resolver.ts"
   },
   "dependencies": {
     "@codesandbox/sandpack-react": "^2.20.0",
@@ -24,6 +25,7 @@
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
     "@react-three/postprocessing": "^3.0.5",
+    "@supabase/supabase-js": "^2.112.3",
     "@swc/core": "^1.16.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

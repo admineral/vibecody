@@ -1,6 +1,6 @@
 import { parseSync } from '@swc/core';
 import { Project, SourceFile, Node, JSDocableNode } from 'ts-morph';
-import { ComponentType, PropMetadata } from '../types';
+import { ComponentType, ImportSpec, PropMetadata } from '../types';
 import * as path from 'path';
 
 // SWC AST node types
@@ -23,6 +23,7 @@ export interface ParsedComponent {
   file: string;
   isClientComponent: boolean;
   imports: string[];
+  importSpecs: ImportSpec[];
   exports: string[];
   props?: PropMetadata[];
   description?: string;
@@ -67,7 +68,8 @@ export class ASTAnalyzer {
       const isClientComponent = this.hasUseClientDirective(ast);
       
       // Extract basic metadata
-      const imports = this.extractImports(ast);
+      const importSpecs = this.extractImportSpecs(ast);
+      const imports = [...new Set(importSpecs.map((spec) => spec.name))];
       const exports = this.extractExports(ast);
       const componentName = this.extractComponentName(ast, path.basename(filePath));
 
@@ -90,6 +92,7 @@ export class ASTAnalyzer {
         file: filePath,
         isClientComponent,
         imports,
+        importSpecs,
         exports,
         props,
         description,
@@ -105,7 +108,8 @@ export class ASTAnalyzer {
           
           // Continue with the same analysis logic
           const isClientComponent = this.hasUseClientDirective(ast);
-          const imports = this.extractImports(ast);
+          const importSpecs = this.extractImportSpecs(ast);
+          const imports = [...new Set(importSpecs.map((spec) => spec.name))];
           const exports = this.extractExports(ast);
           const componentName = this.extractComponentName(ast, path.basename(filePath));
           const type = this.determineComponentType(filePath, ast);
@@ -116,6 +120,7 @@ export class ASTAnalyzer {
             file: filePath,
             isClientComponent,
             imports,
+            importSpecs,
             exports,
             props: [],
             description: undefined,
@@ -146,28 +151,74 @@ export class ASTAnalyzer {
     return false;
   }
 
-  private extractImports(ast: Program): string[] {
-    const imports: string[] = [];
-    
+  private extractImportSpecs(ast: Program): ImportSpec[] {
+    const specs: ImportSpec[] = [];
+
     this.walkAST(ast, (node) => {
       if (node.type === 'ImportDeclaration') {
-        // Extract imported names
+        const source = (node.source as { value?: string } | undefined)?.value;
+        if (!source) return;
+
         const specifiers = node.specifiers as Array<{
           type: string;
-          local: { value: string };
+          local?: { value: string };
           imported?: { value: string };
         }> | undefined;
-        specifiers?.forEach((spec) => {
+
+        if (!specifiers || specifiers.length === 0) {
+          specs.push({ name: source, source });
+          return;
+        }
+
+        specifiers.forEach((spec) => {
           if (spec.type === 'ImportDefaultSpecifier') {
-            imports.push(spec.local.value);
+            specs.push({
+              name: spec.local?.value || 'default',
+              source,
+              isDefault: true,
+            });
+          } else if (spec.type === 'ImportNamespaceSpecifier') {
+            specs.push({
+              name: spec.local?.value || '*',
+              source,
+              isNamespace: true,
+            });
           } else if (spec.type === 'ImportSpecifier') {
-            imports.push(spec.imported?.value || spec.local.value);
+            specs.push({
+              name: spec.imported?.value || spec.local?.value || '',
+              source,
+            });
           }
+        });
+      }
+
+      if (
+        node.type === 'ExportNamedDeclaration' ||
+        node.type === 'ExportAllDeclaration'
+      ) {
+        const source = (node.source as { value?: string } | undefined)?.value;
+        if (!source) return;
+
+        const specifiers = node.specifiers as Array<{
+          orig?: { value: string };
+          exported?: { value: string };
+        }> | undefined;
+
+        if (!specifiers || specifiers.length === 0) {
+          specs.push({ name: '*', source, isNamespace: true });
+          return;
+        }
+
+        specifiers.forEach((spec) => {
+          specs.push({
+            name: spec.exported?.value || spec.orig?.value || '*',
+            source,
+          });
         });
       }
     });
 
-    return [...new Set(imports)];
+    return specs.filter((spec) => spec.name && spec.source);
   }
 
   private extractExports(ast: Program): string[] {

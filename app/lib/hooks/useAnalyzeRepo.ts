@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useComponentData } from '../context/ComponentDataContext';
 import { ComponentMetadata } from '../types';
+import { saveBrowserCache } from '../cache/browser';
 
 export const DEFAULT_REPO_URL = 'https://github.com/admineral/OpenAI-Assistant-API-Chat';
 
@@ -51,6 +52,7 @@ export function useAnalyzeRepo() {
     setStatus({ kind: 'info', text: 'Analyzing repository...' });
 
     const collected: ComponentMetadata[] = [];
+    let files: GitHubFile[] = [];
 
     const handleEvent = (data: AnalyzeEvent) => {
       switch (data.type) {
@@ -58,7 +60,8 @@ export function useAnalyzeRepo() {
           setStatus({ kind: 'info', text: data.message ?? '' });
           break;
         case 'files':
-          setAllFiles(data.allFiles || []);
+          files = data.allFiles || [];
+          setAllFiles(files);
           break;
         case 'component':
           if (data.component) {
@@ -72,6 +75,19 @@ export function useAnalyzeRepo() {
           break;
         case 'complete':
           updateComponents(data.components ?? []);
+          saveBrowserCache({
+            version: '4.0',
+            url: urlToAnalyze,
+            branch: 'main',
+            timestamp: new Date().toISOString(),
+            components: data.components ?? collected,
+            allFiles: files,
+            repository: {
+              owner: urlToAnalyze,
+              name: urlToAnalyze.split('/').pop() ?? '',
+              branch: 'main',
+            },
+          });
           setStatus({
             kind: 'success',
             text: `Successfully analyzed ${data.analyzedFiles} components from ${data.totalFiles} files${data.fromCache ? ' (from cache)' : ''}`,

@@ -1,261 +1,156 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import { ComponentMetadata } from '../types';
+import { filesystemIsEphemeral, filesystemStore } from './backends/filesystem';
+import { kvConfigured, kvStore } from './backends/kv';
+import { supabaseConfigured, supabaseStore } from './backends/supabase';
+import { isEntryFresh } from './freshness';
+import { CACHE_TTL_SECONDS, CACHE_VERSION, CacheBackend, CacheStats, CacheStore, CachedRepo } from './types';
 
-// Cache directory path
-const CACHE_DIR = path.join(process.cwd(), '.cache', 'repos');
+export type { CacheBackend, CachedRepo, CacheStats } from './types';
+export { CACHE_VERSION, CACHE_TTL_SECONDS } from './types';
+export { saveBrowserCache, loadBrowserCache, loadLastBrowserCache, clearBrowserCache } from './browser';
 
-// Cache entry interface
-export interface CacheEntry {
-  repoUrl: string;
-  branch: string;
-  timestamp: number;
-  components: ComponentMetadata[];
-  allFiles: Array<{
-    path: string;
-    type: 'blob' | 'tree';
-    url: string;
-  }>;
-  repository: {
-    owner: string;
-    name: string;
-    branch: string;
-  };
-  // Cache metadata
-  version: string; // Cache format version
-  expiresAt: number; // Expiration timestamp
+function remoteStores(): CacheStore[] {
+  const stores: CacheStore[] = [];
+  if (supabaseConfigured()) stores.push(supabaseStore);
+  if (kvConfigured()) stores.push(kvStore);
+  return stores;
 }
 
-// Cache configuration
-const CACHE_VERSION = '1.0.0';
-const CACHE_EXPIRY_HOURS = 24; // Cache expires after 24 hours
-const MAX_CACHE_SIZE_MB = 100; // Maximum cache size in MB
-
-// Generate cache key from repository URL and branch
-export function generateCacheKey(repoUrl: string, branch: string = 'main'): string {
-  const normalizedUrl = repoUrl.toLowerCase().replace(/\.git$/, '');
-  const key = `${normalizedUrl}#${branch}`;
-  return crypto.createHash('sha256').update(key).digest('hex');
+function allStores(): CacheStore[] {
+  return [...remoteStores(), filesystemStore];
 }
 
-// Ensure cache directory exists
-async function ensureCacheDir(): Promise<void> {
+export function primaryBackend(): CacheBackend {
+  if (supabaseConfigured()) return 'supabase';
+  if (kvConfigured()) return 'kv';
+  return 'filesystem';
+}
+
+export async function getRepoHeadSha(
+  owner: string,
+  repo: string,
+  branch: string,
+  token?: string
+): Promise<string | undefined> {
   try {
-    await fs.mkdir(CACHE_DIR, { recursive: true });
+    const headers: HeadersInit = {
+      Accept: 'application/vnd.github.sha',
+      'User-Agent': 'DocAI-Analyzer',
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(branch)}`,
+      {
+        headers,
+        next: { revalidate: 60 },
+      }
+    );
+
+    if (!response.ok) {
+      console.warn(`Could not resolve HEAD SHA for ${owner}/${repo}#${branch}: ${response.status}`);
+      return undefined;
+    }
+
+    return (await response.text()).trim() || undefined;
   } catch (error) {
-    console.error('Failed to create cache directory:', error);
+    console.warn('Failed to fetch repository HEAD SHA:', error);
+    return undefined;
   }
 }
 
-// Get cache file path for a given key
-function getCacheFilePath(cacheKey: string): string {
-  return path.join(CACHE_DIR, `${cacheKey}.json`);
-}
-
-// Check if cache entry is valid (not expired)
-function isCacheValid(entry: CacheEntry): boolean {
-  const now = Date.now();
-  return entry.expiresAt > now && entry.version === CACHE_VERSION;
-}
-
-// Get cached repository data
-export async function getCachedRepo(repoUrl: string, branch: string = 'main'): Promise<CacheEntry | null> {
-  try {
-    const cacheKey = generateCacheKey(repoUrl, branch);
-    const cacheFilePath = getCacheFilePath(cacheKey);
-    
-    // Check if cache file exists
-    try {
-      await fs.access(cacheFilePath);
-    } catch {
-      return null; // Cache file doesn't exist
+export async function getCachedRepo(
+  repoUrl: string,
+  branch: string,
+  commitSha?: string
+): Promise<CachedRepo | null> {
+  for (const store of allStores()) {
+    const cached = await store.get(repoUrl, branch);
+    if (!cached) continue;
+    if (!isEntryFresh(cached, commitSha)) {
+      console.log(`Cache stale in ${store.backend} for ${repoUrl}#${branch}`);
+      continue;
     }
-    
-    // Read and parse cache file
-    const cacheData = await fs.readFile(cacheFilePath, 'utf-8');
-    const entry: CacheEntry = JSON.parse(cacheData);
-    
-    // Validate cache entry
-    if (!isCacheValid(entry)) {
-      // Cache is expired or invalid, remove it
-      await fs.unlink(cacheFilePath).catch(() => {}); // Ignore errors
-      return null;
-    }
-    
-    console.log(`📦 Cache hit for ${repoUrl}#${branch}`);
-    return entry;
-    
-  } catch (error) {
-    console.error('Error reading cache:', error);
-    return null;
+    console.log(`📦 Cache hit (${store.backend}) for ${repoUrl}#${branch}${cached.commitSha ? ` @ ${cached.commitSha.slice(0, 7)}` : ''}`);
+    return cached;
   }
+
+  return null;
 }
 
-// Cache repository data
 export async function cacheRepo(
   repoUrl: string,
   branch: string,
-  components: ComponentMetadata[],
-  allFiles: Array<{ path: string; type: 'blob' | 'tree'; url: string }>,
-  repository: { owner: string; name: string; branch: string }
+  result: Pick<CachedRepo, 'components' | 'edges' | 'allFiles' | 'repository'>,
+  commitSha?: string
 ): Promise<void> {
+  const entry: CachedRepo = {
+    version: CACHE_VERSION,
+    url: repoUrl,
+    branch,
+    timestamp: new Date().toISOString(),
+    commitSha,
+    components: result.components,
+    edges: result.edges,
+    allFiles: result.allFiles,
+    repository: result.repository,
+  };
+
+  const remote = remoteStores()[0];
   try {
-    await ensureCacheDir();
-    
-    const cacheKey = generateCacheKey(repoUrl, branch);
-    const cacheFilePath = getCacheFilePath(cacheKey);
-    
-    const entry: CacheEntry = {
-      repoUrl,
-      branch,
-      timestamp: Date.now(),
-      components,
-      allFiles,
-      repository,
-      version: CACHE_VERSION,
-      expiresAt: Date.now() + (CACHE_EXPIRY_HOURS * 60 * 60 * 1000)
-    };
-    
-    // Write cache file
-    await fs.writeFile(cacheFilePath, JSON.stringify(entry, null, 2), 'utf-8');
-    
-    console.log(`💾 Cached repository data for ${repoUrl}#${branch}`);
-    
-    // Clean up old cache files if needed
-    await cleanupCache();
-    
+    if (remote) {
+      await remote.set(repoUrl, branch, entry);
+      console.log(`✅ Cached ${result.components.length} components in ${remote.backend} for ${repoUrl}#${branch}`);
+    }
   } catch (error) {
-    console.error('Error writing cache:', error);
+    console.error(`Error caching repo in ${remote?.backend}:`, error);
+  }
+
+  try {
+    await filesystemStore.set(repoUrl, branch, entry);
+    if (!remote) {
+      console.log(`✅ Cached ${result.components.length} components on disk for ${repoUrl}#${branch}`);
+    }
+  } catch (error) {
+    console.error('Error caching repo on disk:', error);
   }
 }
 
-// Clean up expired cache files and enforce size limits
-async function cleanupCache(): Promise<void> {
-  try {
-    const files = await fs.readdir(CACHE_DIR);
-    const cacheFiles = files.filter(file => file.endsWith('.json'));
-    
-    let totalSize = 0;
-    const fileStats: Array<{ file: string; path: string; size: number; mtime: Date }> = [];
-    
-    // Get file stats
-    for (const file of cacheFiles) {
-      const filePath = path.join(CACHE_DIR, file);
-      try {
-        const stats = await fs.stat(filePath);
-        totalSize += stats.size;
-        fileStats.push({
-          file,
-          path: filePath,
-          size: stats.size,
-          mtime: stats.mtime
-        });
-      } catch {
-        // File might have been deleted, skip
-        continue;
-      }
-    }
-    
-    // Remove expired files
-    for (const { file, path: filePath } of fileStats) {
-      try {
-        const cacheData = await fs.readFile(filePath, 'utf-8');
-        const entry: CacheEntry = JSON.parse(cacheData);
-        
-        if (!isCacheValid(entry)) {
-          await fs.unlink(filePath);
-          console.log(`🗑️  Removed expired cache file: ${file}`);
-        }
-      } catch {
-        // If we can't read the file, it's probably corrupted, remove it
-        await fs.unlink(filePath).catch(() => {});
-      }
-    }
-    
-    // If cache is too large, remove oldest files
-    const maxSizeBytes = MAX_CACHE_SIZE_MB * 1024 * 1024;
-    if (totalSize > maxSizeBytes) {
-      // Sort by modification time (oldest first)
-      fileStats.sort((a, b) => a.mtime.getTime() - b.mtime.getTime());
-      
-      let currentSize = totalSize;
-      for (const { file, path: filePath, size } of fileStats) {
-        if (currentSize <= maxSizeBytes) break;
-        
-        try {
-          await fs.unlink(filePath);
-          currentSize -= size;
-          console.log(`🗑️  Removed cache file to free space: ${file}`);
-        } catch {
-          // Ignore errors
-        }
-      }
-    }
-    
-  } catch (error) {
-    console.error('Error during cache cleanup:', error);
-  }
-}
+export async function getCacheStats(): Promise<CacheStats> {
+  const backend = primaryBackend();
+  const backends: CacheBackend[] = allStores().map((store) => store.backend);
+  const primary = allStores().find((store) => store.backend === backend) ?? filesystemStore;
 
-// Get cache statistics
-export async function getCacheStats(): Promise<{
-  totalFiles: number;
-  totalSize: number;
-  oldestFile?: Date;
-  newestFile?: Date;
-}> {
   try {
-    await ensureCacheDir();
-    const files = await fs.readdir(CACHE_DIR);
-    const cacheFiles = files.filter(file => file.endsWith('.json'));
-    
-    let totalSize = 0;
-    let oldestFile: Date | undefined;
-    let newestFile: Date | undefined;
-    
-    for (const file of cacheFiles) {
-      try {
-        const filePath = path.join(CACHE_DIR, file);
-        const stats = await fs.stat(filePath);
-        totalSize += stats.size;
-        
-        if (!oldestFile || stats.mtime < oldestFile) {
-          oldestFile = stats.mtime;
-        }
-        if (!newestFile || stats.mtime > newestFile) {
-          newestFile = stats.mtime;
-        }
-      } catch {
-        // Skip files we can't read
-      }
-    }
-    
+    const stats = await primary.stats();
     return {
-      totalFiles: cacheFiles.length,
-      totalSize,
-      oldestFile,
-      newestFile
+      ...stats,
+      backend,
+      backends,
+      ttlDays: CACHE_TTL_SECONDS / (24 * 60 * 60),
+      ephemeral: backend === 'filesystem' && filesystemIsEphemeral,
     };
-  } catch {
-    return { totalFiles: 0, totalSize: 0 };
+  } catch (error) {
+    console.error('Error getting cache stats:', error);
+    return {
+      totalFiles: 0,
+      totalSize: 0,
+      backend,
+      backends,
+      ttlDays: CACHE_TTL_SECONDS / (24 * 60 * 60),
+      ephemeral: backend === 'filesystem' && filesystemIsEphemeral,
+    };
   }
 }
 
-// Clear all cache
 export async function clearCache(): Promise<void> {
-  try {
-    const files = await fs.readdir(CACHE_DIR);
-    const cacheFiles = files.filter(file => file.endsWith('.json'));
-    
-    await Promise.all(
-      cacheFiles.map(file => 
-        fs.unlink(path.join(CACHE_DIR, file)).catch(() => {})
-      )
-    );
-    
-    console.log(`🗑️  Cleared ${cacheFiles.length} cache files`);
-  } catch (error) {
-    console.error('Error clearing cache:', error);
+  for (const store of allStores()) {
+    try {
+      await store.clear();
+      console.log(`🗑️  Cleared ${store.backend} cache`);
+    } catch (error) {
+      console.error(`Error clearing ${store.backend} cache:`, error);
+    }
   }
-} 
+}

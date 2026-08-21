@@ -321,16 +321,24 @@ export default function CodeCity({ buildings, theme, selectedId, compact, hd, on
       })}
 
       {theme.hivePull && !theme.chipMode && (
-        <mesh position={[0, 1.4, 0]}>
-          <octahedronGeometry args={[1.1, 0]} />
-          <meshStandardMaterial
-            color="#f0abfc"
-            emissive="#d946ef"
-            emissiveIntensity={1.1}
-            metalness={0.6}
-            roughness={0.15}
-          />
-        </mesh>
+        <group position={[0, 1.55, 0]}>
+          <mesh>
+            <icosahedronGeometry args={[0.95, 1]} />
+            <meshStandardMaterial
+              color="#0f172a"
+              emissive="#67e8f9"
+              emissiveIntensity={0.45}
+              metalness={0.85}
+              roughness={0.12}
+              transparent
+              opacity={0.72}
+            />
+          </mesh>
+          <mesh>
+            <icosahedronGeometry args={[1.08, 0]} />
+            <meshBasicMaterial color="#67e8f9" wireframe transparent opacity={0.35} />
+          </mesh>
+        </group>
       )}
 
       {visible.map((building) => (

@@ -14,26 +14,33 @@ export default function FolderPlates({
   theme: VersionTheme
 }) {
   const clusters = useMemo(() => folderClusters(buildings), [buildings])
+  const label = theme.dark ? '#93a4bb' : '#334155'
 
   return (
     <group>
       {clusters.map((cluster) => {
-        const y = theme.floatIslands ? themedBuildingPosition(cluster.members[0], theme)[1] - 0.04 : 0.012
+        const y = theme.floatIslands ? themedBuildingPosition(cluster.members[0], theme)[1] - 0.05 : 0.01
         return (
           <group key={cluster.folder} position={[cluster.x, y, cluster.z]}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[cluster.w, cluster.d]} />
-              <meshStandardMaterial color="#f8fafc" transparent opacity={0.55} roughness={0.95} />
+              <meshStandardMaterial
+                color={theme.paper}
+                transparent
+                opacity={theme.dark ? 0.28 : 0.2}
+                roughness={0.7}
+                metalness={0.25}
+              />
             </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
-              <planeGeometry args={[cluster.w - 0.08, cluster.d - 0.08]} />
-              <meshBasicMaterial color="#cbd5e1" transparent opacity={0.25} />
+            <mesh position={[0, 0.01, 0]}>
+              <boxGeometry args={[cluster.w, 0.012, cluster.d]} />
+              <meshBasicMaterial color={theme.grid} transparent opacity={0.45} wireframe />
             </mesh>
             <Text
-              position={[0, 0.05, -cluster.d / 2 + 0.22]}
+              position={[0, 0.06, -cluster.d / 2 + 0.18]}
               rotation={[-Math.PI / 2, 0, 0]}
-              fontSize={0.16}
-              color="#0f172a"
+              fontSize={0.13}
+              color={label}
               anchorX="center"
               anchorY="middle"
             >

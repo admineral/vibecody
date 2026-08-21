@@ -12,9 +12,9 @@ import MobileHUD from './MobileHUD'
 const SwarmScene = dynamic(() => import('./SwarmScene'), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-sky-200 text-slate-800">
-      <Loader2 className="h-8 w-8 animate-spin text-sky-700" />
-      <p className="text-sm text-slate-700">Booting swarm city…</p>
+    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#0b0f14] text-slate-300">
+      <Loader2 className="h-7 w-7 animate-spin text-cyan-400" />
+      <p className="text-sm tracking-tight text-slate-400">Booting code universe…</p>
     </div>
   ),
 })
@@ -99,7 +99,7 @@ export default function SwarmGame() {
   }
 
   return (
-    <div ref={rootRef} className="relative h-dvh w-full overflow-hidden bg-sky-200 touch-none overscroll-none">
+    <div ref={rootRef} className="relative h-dvh w-full overflow-hidden touch-none overscroll-none" style={{ background: theme.background }}>
       <SwarmScene
         snapshot={snapshot}
         agents={agents}

@@ -5,15 +5,6 @@ import { Line, Text } from '@react-three/drei'
 import type { BuildingState, VersionTheme } from '@/app/lib/swarm/types'
 import { themedBuildingPosition } from '@/app/lib/swarm/cityLayout'
 
-const KIND_TINT: Record<BuildingState['kind'], string> = {
-  page: '#2563eb',
-  component: '#7c3aed',
-  hook: '#ea580c',
-  util: '#0f766e',
-  api: '#be123c',
-  config: '#a16207',
-}
-
 export default function ModuleLinks({
   buildings,
   theme,
@@ -43,22 +34,22 @@ export default function ModuleLinks({
       {links.map((link) => {
         const [x1, y1, z1] = themedBuildingPosition(link.from, theme)
         const [x2, y2, z2] = themedBuildingPosition(link.to, theme)
-        const midY = (link.hot ? 1.15 : 0.28) + (theme.floatIslands ? (y1 + y2) / 2 : 0)
-        const start: [number, number, number] = [x1, y1 + 0.08, z1]
+        const midY = (link.hot ? 1.05 : 0.22) + (theme.floatIslands ? (y1 + y2) / 2 : 0)
+        const start: [number, number, number] = [x1, y1 + 0.06, z1]
         const mid: [number, number, number] = [(x1 + x2) / 2, midY, (z1 + z2) / 2]
-        const end: [number, number, number] = [x2, y2 + 0.08, z2]
-        const color = KIND_TINT[link.from.kind]
+        const end: [number, number, number] = [x2, y2 + 0.06, z2]
+        const color = link.from.color
         return (
           <group key={link.key}>
             <Line
               points={[start, mid, end]}
               color={color}
-              lineWidth={link.hot ? 2.2 : 1}
+              lineWidth={link.hot ? 1.6 : 0.7}
               transparent
-              opacity={link.hot ? 0.95 : 0.28}
+              opacity={link.hot ? 0.9 : theme.dark ? 0.16 : 0.22}
             />
             {link.hot && (
-              <Text position={mid} fontSize={0.11} color={color} anchorX="center">
+              <Text position={mid} fontSize={0.09} color={color} anchorX="center">
                 uses
               </Text>
             )}

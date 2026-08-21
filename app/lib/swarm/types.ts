@@ -140,6 +140,13 @@ export interface VersionTheme {
   hivePull: boolean
   chipMode: boolean
   cardMode?: boolean
+  dark: boolean
+  exposure: number
+  hemiSky: string
+  hemiGround: string
+  grid: string
+  paper: string
+  ink: string
 }
 
 export interface WorldSnapshot {

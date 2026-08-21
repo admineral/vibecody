@@ -41,7 +41,6 @@ function Environment({ theme, hd }: { theme: VersionTheme; hd?: boolean }) {
   return (
     <>
       <color attach="background" args={[theme.background]} />
-      <fog attach="fog" args={[theme.fog, theme.fogNear, theme.fogFar]} />
       <hemisphereLight args={['#f8fafc', '#86efac', 0.95]} />
       <ambientLight intensity={theme.ambient} />
       <directionalLight
@@ -60,7 +59,7 @@ function Environment({ theme, hd }: { theme: VersionTheme; hd?: boolean }) {
       )}
       {!theme.nodeMode && !theme.floatIslands && !theme.chipMode && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
-          <planeGeometry args={[180, 180]} />
+          <planeGeometry args={[260, 260]} />
           <meshStandardMaterial color={theme.ground} roughness={0.9} />
         </mesh>
       )}
@@ -148,12 +147,13 @@ export default function SwarmScene(props: SwarmSceneProps) {
 
   return (
     <Canvas
-      camera={{ position: cameraPosition, fov: props.theme.chipMode ? 62 : props.portrait ? 64 : 50, near: 0.1, far: 420 }}
+      camera={{ position: cameraPosition, fov: props.theme.chipMode ? 62 : props.portrait ? 64 : 50, near: 0.1, far: 800 }}
       dpr={hd ? [1, 2] : [1, 1.25]}
       shadows={false}
       eventSource={(props.eventSource as MutableRefObject<HTMLElement> | undefined) ?? undefined}
       eventPrefix="client"
-      onCreated={({ gl }) => {
+      onCreated={({ gl, scene }) => {
+        scene.fog = null
         gl.shadowMap.type = PCFShadowMap
         gl.toneMapping = ACESFilmicToneMapping
         gl.toneMappingExposure = 1.18

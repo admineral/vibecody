@@ -18,7 +18,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#05010a',
+  themeColor: '#87ceeb',
 }
 
 export default function SwarmPage() {

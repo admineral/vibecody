@@ -37,7 +37,7 @@ function RoofKit({
     <group position={[0, y, 0]}>
       <mesh>
         <boxGeometry args={[width * 0.92, 0.12, depth * 0.92]} />
-        <meshStandardMaterial color={neon ? '#020617' : '#334155'} metalness={0.35} roughness={0.4} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.35} roughness={0.4} />
       </mesh>
       {kind === 'page' && (
         <mesh position={[0, 0.55, 0]}>
@@ -186,7 +186,7 @@ function BuildingMesh({
         >
           <boxGeometry args={[1.15, 0.28, 1.15]} />
           <meshStandardMaterial
-            color={building.hasBug ? '#7f1d1d' : '#1e293b'}
+            color={building.hasBug ? '#fecaca' : '#cbd5e1'}
             emissive={color}
             emissiveIntensity={building.beingWorked || selected ? 0.55 : 0.12}
             metalness={0.5}

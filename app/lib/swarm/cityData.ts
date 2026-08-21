@@ -1,11 +1,11 @@
 import type { AgentDef, BuildingDef, DistrictDef } from './types'
 
 export const DISTRICTS: DistrictDef[] = [
-  { id: 'app', name: 'app/', origin: [-12, 0, -10], size: [10, 8], color: '#1e293b', neon: '#38bdf8' },
-  { id: 'components', name: 'components/', origin: [4, 0, -10], size: [12, 8], color: '#172554', neon: '#a78bfa' },
-  { id: 'lib', name: 'lib/', origin: [-12, 0, 4], size: [10, 8], color: '#14532d', neon: '#34d399' },
-  { id: 'api', name: 'api/', origin: [6, 0, 4], size: [10, 8], color: '#7c2d12', neon: '#fb7185' },
-  { id: 'root', name: 'root', origin: [-2, 0, 14], size: [8, 4], color: '#3f3f46', neon: '#fbbf24' },
+  { id: 'app', name: 'app/', origin: [-12, 0, -10], size: [10, 8], color: '#dbeafe', neon: '#0284c7' },
+  { id: 'components', name: 'components/', origin: [4, 0, -10], size: [12, 8], color: '#ede9fe', neon: '#7c3aed' },
+  { id: 'lib', name: 'lib/', origin: [-12, 0, 4], size: [10, 8], color: '#dcfce7', neon: '#15803d' },
+  { id: 'api', name: 'api/', origin: [6, 0, 4], size: [10, 8], color: '#fee2e2', neon: '#be123c' },
+  { id: 'root', name: 'root', origin: [-2, 0, 14], size: [8, 4], color: '#fef9c3', neon: '#a16207' },
 ]
 
 export const BUILDINGS: BuildingDef[] = [

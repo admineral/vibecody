@@ -6,6 +6,7 @@ import type { BuildingDef, BuildingState, VersionTheme } from '@/app/lib/swarm/t
 import { DISTRICTS } from '@/app/lib/swarm/cityData'
 import { buildingFootprint, themedBuildingPosition, themedDistrictY } from '@/app/lib/swarm/cityLayout'
 import CityFabric from './CityFabric'
+import SwarmCodeCard from './SwarmCodeCard'
 import { useFacadeLibrary, type Facade } from './cityTextures'
 
 interface CodeCityProps {
@@ -13,6 +14,7 @@ interface CodeCityProps {
   theme: VersionTheme
   selectedId: string | null
   compact?: boolean
+  hd?: boolean
   onSelect: (id: string) => void
 }
 
@@ -35,7 +37,7 @@ function RoofKit({
     <group position={[0, y, 0]}>
       <mesh>
         <boxGeometry args={[width * 0.92, 0.12, depth * 0.92]} />
-        <meshStandardMaterial color={neon ? '#020617' : '#334155'} metalness={0.35} roughness={0.4} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.35} roughness={0.4} />
       </mesh>
       {kind === 'page' && (
         <mesh position={[0, 0.55, 0]}>
@@ -90,18 +92,17 @@ function CityBuilding({
   const height = Math.max(0.4, building.height * building.growth)
   const [fw, fd] = buildingFootprint(building.kind, building.id)
   const color = building.hasBug ? '#ef4444' : selected ? '#f0abfc' : building.color
-  const neon = theme.id === 'neon' || theme.id === 'hive'
-  const daylight = theme.id === 'daylight'
+  const neon = theme.id === 'neon' || theme.id === 'hive' || theme.id === 'repo'
   const podiumH = Math.min(0.42, height * 0.16)
   const roofH = 0.12
   const towerH = Math.max(0.28, height - podiumH - roofH)
-  const emissiveIntensity = building.hasBug ? 0.85 : building.beingWorked ? 0.7 : neon ? 0.48 : daylight ? 0.1 : 0.28
+  const emissiveIntensity = building.hasBug ? 0.45 : building.beingWorked ? 0.35 : 0.12
 
   return (
     <group position={[x, y, z]} scale={[1, building.growth, 1]}>
       <mesh position={[0, podiumH / 2, 0]} onClick={(e) => { e.stopPropagation(); onSelect() }}>
         <boxGeometry args={[fw * 1.14, podiumH, fd * 1.14]} />
-        <meshStandardMaterial color={daylight ? '#cbd5e1' : '#0f172a'} metalness={0.2} roughness={0.55} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.2} roughness={0.55} />
       </mesh>
       <mesh
         position={[0, podiumH + towerH / 2, 0]}
@@ -141,7 +142,7 @@ function CityBuilding({
         <Text
           position={[0, height + 0.38, 0]}
           fontSize={selected ? 0.2 : 0.15}
-          color={selected ? '#ffffff' : daylight ? '#0f172a' : '#cbd5e1'}
+          color={selected ? '#ffffff' : '#0f172a'}
           anchorX="center"
           anchorY="bottom"
         >
@@ -158,6 +159,7 @@ function BuildingMesh({
   selected,
   compact,
   facade,
+  hd,
   onSelect,
 }: {
   building: BuildingState
@@ -165,6 +167,7 @@ function BuildingMesh({
   selected: boolean
   compact?: boolean
   facade: Facade | null
+  hd?: boolean
   onSelect: () => void
 }) {
   const [x, y, z] = themedBuildingPosition(building, theme)
@@ -183,7 +186,7 @@ function BuildingMesh({
         >
           <boxGeometry args={[1.15, 0.28, 1.15]} />
           <meshStandardMaterial
-            color={building.hasBug ? '#7f1d1d' : '#1e293b'}
+            color={building.hasBug ? '#fecaca' : '#cbd5e1'}
             emissive={color}
             emissiveIntensity={building.beingWorked || selected ? 0.55 : 0.12}
             metalness={0.5}
@@ -239,6 +242,18 @@ function BuildingMesh({
     )
   }
 
+  if (theme.cardMode) {
+    return (
+      <SwarmCodeCard
+        building={building}
+        theme={theme}
+        selected={selected}
+        hd={hd}
+        onSelect={onSelect}
+      />
+    )
+  }
+
   return (
     <CityBuilding
       building={building}
@@ -251,14 +266,12 @@ function BuildingMesh({
   )
 }
 
-export default function CodeCity({ buildings, theme, selectedId, compact, onSelect }: CodeCityProps) {
+export default function CodeCity({ buildings, theme, selectedId, compact, hd, onSelect }: CodeCityProps) {
   const visible = useMemo(
     () => buildings.filter((b) => b.spawned),
     [buildings],
   )
   const facades = useFacadeLibrary(theme)
-  const daylight = theme.id === 'daylight'
-  const neon = theme.id === 'neon' || theme.id === 'hive'
 
   return (
     <group>
@@ -266,15 +279,15 @@ export default function CodeCity({ buildings, theme, selectedId, compact, onSele
 
       {!theme.nodeMode && !theme.chipMode && DISTRICTS.map((district) => {
         const y = themedDistrictY(district.id, theme)
-        const plateColor = daylight ? '#e2e8f0' : '#111827'
+        const plateColor = '#e2e8f0'
         return (
           <group key={district.id} position={[district.origin[0], y, district.origin[2]]}>
             <mesh position={[0, theme.floatIslands ? -0.12 : 0.015, 0]} receiveShadow>
               <boxGeometry args={[district.size[0] + 0.55, theme.floatIslands ? 0.35 : 0.1, district.size[1] + 0.55]} />
               <meshStandardMaterial
                 color={district.color}
-                emissive={neon ? district.neon : '#000'}
-                emissiveIntensity={neon ? 0.22 : 0}
+                emissive={district.neon}
+                emissiveIntensity={0.12}
                 metalness={0.2}
                 roughness={0.55}
               />
@@ -287,7 +300,7 @@ export default function CodeCity({ buildings, theme, selectedId, compact, onSele
               <Text
                 position={[0, theme.floatIslands ? 0.4 : 0.22, district.size[1] / 2 - 0.35]}
                 fontSize={0.28}
-                color={daylight ? '#0f172a' : district.neon}
+                color="#0f172a"
                 anchorX="center"
               >
                 {district.name}
@@ -317,6 +330,7 @@ export default function CodeCity({ buildings, theme, selectedId, compact, onSele
           theme={theme}
           selected={selectedId === building.id}
           compact={compact}
+          hd={hd}
           facade={facades?.byKind[building.kind] ?? null}
           onSelect={() => onSelect(building.id)}
         />

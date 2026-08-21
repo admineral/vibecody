@@ -6,15 +6,18 @@ import { getMission } from './flows'
 import type {
   AgentKind,
   AgentRuntime,
+  BuildingDef,
   BuildingState,
   CodeSlabState,
   FlowStep,
+  MissionFlow,
+  SwarmCatalog,
   TrailSegment,
   WorldSnapshot,
 } from './types'
 
-function cloneBuildings(): BuildingState[] {
-  return BUILDINGS.map((b) => ({
+function cloneBuildings(defs: BuildingDef[] = BUILDINGS): BuildingState[] {
+  return defs.map((b) => ({
     id: b.id,
     name: b.name,
     district: b.district,
@@ -47,8 +50,8 @@ function initialAgents(buildings: BuildingState[]): AgentRuntime[] {
   })
 }
 
-function resetWorld(missionId: string): WorldSnapshot {
-  const buildings = cloneBuildings()
+function resetWorld(missionId: string, catalog?: SwarmCatalog): WorldSnapshot {
+  const buildings = cloneBuildings(catalog?.buildings)
   return {
     time: 0,
     missionId,
@@ -57,9 +60,16 @@ function resetWorld(missionId: string): WorldSnapshot {
     agents: initialAgents(buildings),
     slabs: [],
     trails: [],
-    log: ['[dev] simulateReadableStream(mission) — no API'],
+    log: catalog?.repoName
+      ? [`[dev] repo replay · ${catalog.repoName}`, '[dev] simulateReadableStream(mission)']
+      : ['[dev] simulateReadableStream(mission) — no API'],
     activeStep: null,
+    repoName: catalog?.repoName,
   }
+}
+
+function pickMission(id: string, extras?: MissionFlow[]) {
+  return extras?.find((item) => item.id === id) ?? getMission(id)
 }
 
 function agentById(world: WorldSnapshot, id: FlowStep['agent']) {
@@ -93,7 +103,7 @@ function applyStep(world: WorldSnapshot, step: FlowStep) {
 
   agent.kind = step.kind
   agent.status = step.message
-  agent.beam = step.kind === 'scan' || step.kind === 'edit' || step.kind === 'fix' || step.kind === 'grow'
+  agent.beam = step.kind === 'scan' || step.kind === 'edit' || step.kind === 'fix' || step.kind === 'grow' || step.kind === 'spawn'
 
   if (step.spawnId) {
     const spawned = buildingById(world, step.spawnId)
@@ -179,20 +189,28 @@ function upsertSlab(world: WorldSnapshot, building: BuildingState, code: string,
   }
 }
 
-export function useSwarmEngine(missionId: string, speed: number, playing: boolean) {
-  const worldRef = useRef<WorldSnapshot>(resetWorld(missionId))
+export function useSwarmEngine(
+  missionId: string,
+  speed: number,
+  playing: boolean,
+  catalog?: SwarmCatalog,
+) {
+  const worldRef = useRef<WorldSnapshot>(resetWorld(missionId, catalog))
   const appliedRef = useRef(new Set<number>())
+  const catalogRef = useRef(catalog)
+  catalogRef.current = catalog
+  const catalogKey = `${catalog?.repoName ?? ''}:${catalog?.buildings?.map((b) => b.id).join(',') ?? ''}:${catalog?.missions?.map((m) => m.id).join(',') ?? ''}`
   const [snapshot, setSnapshot] = useState<WorldSnapshot>(() => structuredClone(worldRef.current))
 
   const restart = useCallback((id = missionId) => {
-    worldRef.current = resetWorld(id)
+    worldRef.current = resetWorld(id, catalogRef.current)
     appliedRef.current = new Set()
     setSnapshot(structuredClone(worldRef.current))
   }, [missionId])
 
   useEffect(() => {
     restart(missionId)
-  }, [missionId, restart])
+  }, [missionId, restart, catalogKey])
 
   useEffect(() => {
     let frame = 0
@@ -203,7 +221,8 @@ export function useSwarmEngine(missionId: string, speed: number, playing: boolea
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
       const world = worldRef.current
-      const mission = getMission(world.missionId)
+      const extras = catalogRef.current?.missions
+      const mission = pickMission(world.missionId, extras)
 
       world.buildings.forEach((b) => {
         if (b.spawned && b.growth < 1) {
@@ -218,7 +237,7 @@ export function useSwarmEngine(missionId: string, speed: number, playing: boolea
             const trails = world.trails.slice(0, 24)
             const spawned = world.buildings.map((b) => ({ ...b, beingWorked: false }))
             worldRef.current = {
-              ...resetWorld(world.missionId),
+              ...resetWorld(world.missionId, catalogRef.current),
               buildings: spawned,
               trails,
             }
@@ -229,7 +248,7 @@ export function useSwarmEngine(missionId: string, speed: number, playing: boolea
         }
 
         const current = worldRef.current
-        const steps = getMission(current.missionId).steps
+        const steps = pickMission(current.missionId, catalogRef.current?.missions).steps
         for (let i = 0; i < steps.length; i++) {
           const step = steps[i]
           if (current.time >= step.at && !appliedRef.current.has(i)) {

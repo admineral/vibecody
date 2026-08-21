@@ -1,9 +1,9 @@
 'use client'
 
-import { Suspense, useMemo, useRef, type MutableRefObject } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Suspense, useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
 import { AdaptiveDpr, Sky, Stars } from '@react-three/drei'
-import { Group, PCFShadowMap } from 'three'
+import { ACESFilmicToneMapping, Group, PCFShadowMap, SRGBColorSpace } from 'three'
 import type { AgentDef, CameraMode, VersionTheme, WorldSnapshot } from '@/app/lib/swarm/types'
 import CodeCity from './CodeCity'
 import SwarmDrones from './SwarmDrones'
@@ -21,34 +21,27 @@ interface SwarmSceneProps {
   selectedBuildingId: string | null
   portrait?: boolean
   resetNonce?: number
+  hd?: boolean
   eventSource?: MutableRefObject<HTMLElement | null>
   onSelectBuilding: (id: string) => void
   onSelectAgent: (id: string) => void
 }
 
-function Environment({ theme, portrait }: { theme: VersionTheme; portrait?: boolean }) {
-  const daylight = theme.id === 'daylight'
-  const neon = theme.id === 'neon' || theme.id === 'hive'
+function ToneMap() {
+  const { gl } = useThree()
+  useLayoutEffect(() => {
+    gl.toneMapping = ACESFilmicToneMapping
+    gl.outputColorSpace = SRGBColorSpace
+    gl.toneMappingExposure = 1.18
+  }, [gl])
+  return null
+}
+
+function Environment({ theme, hd }: { theme: VersionTheme; hd?: boolean }) {
   return (
     <>
       <color attach="background" args={[theme.background]} />
-      <fog
-        attach="fog"
-        args={[
-          theme.fog,
-          theme.chipMode ? 16 : portrait ? 14 : theme.fogNear,
-          theme.chipMode ? 56 : portrait ? 58 : theme.fogFar,
-        ]}
-      />
-      <hemisphereLight
-        args={
-          daylight
-            ? ['#dbeafe', '#4d7c0f', 0.55]
-            : neon
-              ? ['#6d28d9', '#020617', 0.32]
-              : ['#94a3b8', '#020617', 0.22]
-        }
-      />
+      <hemisphereLight args={['#f8fafc', '#86efac', 0.95]} />
       <ambientLight intensity={theme.ambient} />
       <directionalLight
         position={theme.sun}
@@ -56,17 +49,18 @@ function Environment({ theme, portrait }: { theme: VersionTheme; portrait?: bool
         color={theme.sunColor}
         castShadow={false}
       />
-      <pointLight position={[0, 10, 0]} intensity={theme.id === 'hive' ? 1.2 : neon ? 0.55 : 0.35} color={theme.sunColor} />
+      <directionalLight position={[-14, 18, -10]} intensity={0.55} color="#dbeafe" />
+      <pointLight position={[0, 14, 0]} intensity={0.7} color="#fff7ed" distance={120} />
       {theme.stars && (
-        <Stars radius={70} depth={30} count={theme.nodeMode ? 900 : 500} factor={2.4} saturation={0} fade speed={0.35} />
+        <Stars radius={90} depth={40} count={theme.nodeMode ? 500 : hd ? 280 : 160} factor={2.2} saturation={0} fade speed={0.35} />
       )}
       {theme.sky && (
-        <Sky distance={450000} sunPosition={[1, 1, 0]} inclination={0.49} azimuth={0.25} />
+        <Sky distance={450000} sunPosition={[1, 1.2, 0.4]} inclination={0.52} azimuth={0.25} />
       )}
       {!theme.nodeMode && !theme.floatIslands && !theme.chipMode && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
-          <planeGeometry args={[140, 140]} />
-          <meshStandardMaterial color={daylight ? '#86efac' : theme.ground} roughness={0.92} />
+          <planeGeometry args={[260, 260]} />
+          <meshStandardMaterial color={theme.ground} roughness={0.9} />
         </mesh>
       )}
     </>
@@ -84,19 +78,22 @@ function SceneBody({
   onSelectAgent,
   portrait = true,
   resetNonce = 0,
+  hd,
   homePosition,
 }: SwarmSceneProps & { homePosition: [number, number, number] }) {
   const groupRefs = useRef<Record<string, Group | null>>({})
 
   return (
     <>
-      <Environment theme={theme} portrait={portrait} />
+      <ToneMap />
+      <Environment theme={theme} hd={hd} />
       {theme.chipMode && <ChipFabric buildings={snapshot.buildings} theme={theme} />}
       <CodeCity
         buildings={snapshot.buildings}
         theme={theme}
         selectedId={selectedBuildingId}
-        compact={portrait}
+        compact={portrait && !hd}
+        hd={hd}
         onSelect={onSelectBuilding}
       />
       <SwarmDrones
@@ -106,14 +103,15 @@ function SceneBody({
         theme={theme}
         followId={followId}
         groupRefs={groupRefs}
-        compact={portrait}
+        compact={portrait && !hd}
+        hd={hd}
         onSelect={onSelectAgent}
       />
       <CodeSlabs
         slabs={snapshot.slabs}
         buildings={snapshot.buildings}
         theme={theme}
-        compact={portrait}
+        compact={portrait && !hd}
         selectedId={selectedBuildingId}
       />
       {!theme.chipMode && (
@@ -133,12 +131,13 @@ function SceneBody({
 }
 
 export default function SwarmScene(props: SwarmSceneProps) {
+  const hd = props.hd !== false
   const cameraPosition = useMemo<[number, number, number]>(() => {
     if (props.theme.chipMode) return [0.4, 22, 12]
     if (props.portrait) {
       if (props.theme.nodeMode) return [0, 12, 14]
       if (props.theme.hivePull) return [5, 11, 8]
-      return [11, 10, 13]
+      return [12, 9, 14]
     }
     if (props.theme.nodeMode) return [0, 14, 22]
     if (props.theme.hivePull) return [8, 10, 12]
@@ -148,13 +147,17 @@ export default function SwarmScene(props: SwarmSceneProps) {
 
   return (
     <Canvas
-      camera={{ position: cameraPosition, fov: props.theme.chipMode ? 62 : props.portrait ? 68 : 52, near: 0.1, far: 180 }}
-      dpr={[1, 1.25]}
+      camera={{ position: cameraPosition, fov: props.theme.chipMode ? 62 : props.portrait ? 64 : 50, near: 0.1, far: 800 }}
+      dpr={hd ? [1, 2] : [1, 1.25]}
       shadows={false}
       eventSource={(props.eventSource as MutableRefObject<HTMLElement> | undefined) ?? undefined}
       eventPrefix="client"
-      onCreated={({ gl }) => {
+      onCreated={({ gl, scene }) => {
+        scene.fog = null
         gl.shadowMap.type = PCFShadowMap
+        gl.toneMapping = ACESFilmicToneMapping
+        gl.toneMappingExposure = 1.18
+        gl.outputColorSpace = SRGBColorSpace
       }}
       gl={{
         antialias: true,
@@ -164,9 +167,9 @@ export default function SwarmScene(props: SwarmSceneProps) {
       }}
       style={{ width: '100%', height: '100%', touchAction: 'none', pointerEvents: props.eventSource ? 'none' : 'auto' }}
     >
-      <AdaptiveDpr pixelated />
+      {hd ? <AdaptiveDpr /> : <AdaptiveDpr pixelated />}
       <Suspense fallback={null}>
-        <SceneBody {...props} homePosition={cameraPosition} />
+        <SceneBody {...props} hd={hd} homePosition={cameraPosition} />
       </Suspense>
     </Canvas>
   )

@@ -111,7 +111,7 @@ export default function CameraRig({
       zoomSpeed={0.85}
       panSpeed={0.7}
       minDistance={chipMode ? 6 : 2.6}
-      maxDistance={chipMode ? 40 : portrait ? 38 : 56}
+      maxDistance={chipMode ? 80 : 120}
       minPolarAngle={chipMode ? 0.08 : 0.12}
       maxPolarAngle={chipMode ? 1.35 : Math.PI / 2.08}
       screenSpacePanning

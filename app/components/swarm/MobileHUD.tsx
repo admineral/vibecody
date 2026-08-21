@@ -15,7 +15,7 @@ import {
   Terminal,
   X,
 } from 'lucide-react'
-import type { AgentDef, CameraMode, SwarmVersionId, VersionTheme, WorldSnapshot } from '@/app/lib/swarm/types'
+import type { AgentDef, CameraMode, MissionFlow, SwarmVersionId, VersionTheme, WorldSnapshot } from '@/app/lib/swarm/types'
 import { MISSIONS } from '@/app/lib/swarm/flows'
 import { VERSIONS } from '@/app/lib/swarm/versions'
 
@@ -26,16 +26,21 @@ interface MobileHUDProps {
   agents: AgentDef[]
   theme: VersionTheme
   missionId: string
+  extraMissions?: MissionFlow[]
   cameraMode: CameraMode
   followId: string | null
   playing: boolean
   speed: number
+  hd: boolean
+  repoName?: string | null
+  liveRepo?: boolean
   onVersion: (id: SwarmVersionId) => void
   onMission: (id: string) => void
   onCamera: (mode: CameraMode) => void
   onFollow: (id: string | null) => void
   onPlaying: (playing: boolean) => void
   onSpeed: (speed: number) => void
+  onHd: (hd: boolean) => void
   onRestart: () => void
   onResetView: () => void
 }
@@ -55,24 +60,32 @@ export default function MobileHUD({
   agents,
   theme,
   missionId,
+  extraMissions,
   cameraMode,
   followId,
   playing,
   speed,
+  hd,
+  repoName,
+  liveRepo,
   onVersion,
   onMission,
   onCamera,
   onFollow,
   onPlaying,
   onSpeed,
+  onHd,
   onRestart,
   onResetView,
 }: MobileHUDProps) {
   const [sheet, setSheet] = useState<Sheet>('none')
   const [hint, setHint] = useState(true)
+  const missions = extraMissions?.length
+    ? [...extraMissions, ...MISSIONS.filter((item) => !extraMissions.some((extra) => extra.id === item.id))]
+    : MISSIONS
   const activeAgent = snapshot.agents.find((a) => a.id === (followId ?? snapshot.activeStep?.agent))
-  const mission = MISSIONS.find((m) => m.id === missionId)
-  const missionIndex = Math.max(0, MISSIONS.findIndex((m) => m.id === missionId))
+  const mission = missions.find((m) => m.id === missionId)
+  const missionIndex = Math.max(0, missions.findIndex((m) => m.id === missionId))
   const progress = mission ? Math.min(1, snapshot.time / mission.duration) : 0
   const followed = agents.find((a) => a.id === followId) ?? agents.find((a) => a.id === activeAgent?.id)
   const latestTool = snapshot.log.find((line) => line.startsWith('[dev]'))
@@ -92,7 +105,7 @@ export default function MobileHUD({
         onPointerDown={trapPointer}
       >
         <div className="mb-2 flex gap-1">
-          {MISSIONS.map((item, i) => (
+          {missions.map((item, i) => (
             <button
               key={item.id}
               type="button"
@@ -163,6 +176,16 @@ export default function MobileHUD({
         >
           <RotateCcw className="h-4 w-4" />
         </button>
+        <button
+          type="button"
+          onClick={() => onHd(!hd)}
+          className={`pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full text-[10px] font-bold backdrop-blur-md ${
+            hd ? 'bg-fuchsia-500 text-white' : 'bg-black/45 text-white'
+          }`}
+          aria-label="Toggle HD"
+        >
+          HD
+        </button>
       </div>
 
       <div
@@ -223,6 +246,11 @@ export default function MobileHUD({
             @{followed?.name ?? 'Swarm'}
             <span className="ml-2 text-[11px] font-normal text-white/60">{followed?.version}</span>
           </p>
+          {repoName && (
+            <p className="text-[10px] text-fuchsia-200/80">
+              {liveRepo ? 'live' : 'synthetic'} · {repoName}
+            </p>
+          )}
           <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-white/90">
             {activeAgent?.status ?? mission?.blurb}
           </p>
@@ -291,7 +319,7 @@ export default function MobileHUD({
                 <section>
                   <p className="mb-2 text-[10px] uppercase tracking-wider text-white/45">Mission</p>
                   <div className="flex flex-col gap-1.5">
-                    {MISSIONS.map((item) => (
+                    {missions.map((item) => (
                       <button
                         key={item.id}
                         type="button"

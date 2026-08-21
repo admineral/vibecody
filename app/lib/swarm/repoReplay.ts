@@ -1,5 +1,6 @@
 import type { BuildingDef, FlowStep, MissionFlow } from './types'
 import { DISTRICTS } from './cityData'
+import { enrichBuildingMeta, folderFromPath, knownModuleIndex } from './moduleGraph'
 
 export const DEFAULT_SWARM_REPO = 'https://github.com/admineral/OpenAI-Assistant-API-Chat'
 
@@ -85,13 +86,14 @@ export function filesToBuildings(files: RepoFileInput[], limit = 28): BuildingDe
     .slice(0, limit)
 
   const counters: Record<string, number> = {}
-  return ranked.map((file) => {
+  const drafted = ranked.map((file) => {
     const district = districtFromPath(file.path)
     const districtDef = DISTRICTS.find((item) => item.id === district) ?? DISTRICTS[0]
-    const cols = Math.max(3, Math.floor(districtDef.size[0] / 2.1))
+    const cols = Math.max(3, Math.floor(districtDef.size[0] / 1.9))
     const index = counters[district] ?? 0
     counters[district] = index + 1
     const lines = file.content ? file.content.split('\n').length : 40 + (file.path.length % 80)
+    const kind = kindFromPath(file.path)
     return {
       id: fileId(file.path),
       name: file.path.split('/').pop() ?? file.path,
@@ -99,10 +101,18 @@ export function filesToBuildings(files: RepoFileInput[], limit = 28): BuildingDe
       col: index % cols,
       row: Math.floor(index / cols),
       lines,
-      kind: kindFromPath(file.path),
+      kind,
+      path: file.path,
+      folder: folderFromPath(file.path),
+      sandbox: kind === 'page',
       code: stubCode(file.path, file.content),
-    }
+    } satisfies BuildingDef
   })
+  const known = knownModuleIndex(drafted)
+  return drafted.map((building) => ({
+    ...building,
+    ...enrichBuildingMeta(building, known),
+  }))
 }
 
 function snippetFromPatch(patch?: string) {
@@ -242,22 +252,22 @@ export function commitsToMission(
 }
 
 export const FALLBACK_REPO_FILES: RepoFileInput[] = [
-  { path: 'app/page.tsx', content: 'export default function Home() {\n  return <WelcomeForm />\n}' },
+  { path: 'app/page.tsx', content: 'import WelcomeForm from \'@/components/WelcomeForm\'\nexport default function Home() {\n  return <WelcomeForm />\n}' },
   { path: 'app/layout.tsx', content: 'export default function RootLayout({ children }) {\n  return <html>{children}</html>\n}' },
-  { path: 'app/components/WelcomeForm.tsx', content: 'export default function WelcomeForm() {\n  return <form />\n}' },
-  { path: 'app/components/InputForm.tsx', content: 'export default function InputForm() {\n  return <form />\n}' },
+  { path: 'app/components/WelcomeForm.tsx', content: 'import InputForm from \'@/components/InputForm\'\nimport { useChatState } from \'@/hooks/useChatState\'\nexport default function WelcomeForm() {\n  const chat = useChatState()\n  return <InputForm chat={chat} />\n}' },
+  { path: 'app/components/InputForm.tsx', content: 'import { useChatManager } from \'@/hooks/useChatManager\'\nexport default function InputForm() {\n  const { send } = useChatManager()\n  return <form onSubmit={send} />\n}' },
   { path: 'app/components/MessageList.js', content: 'export default function MessageList({ messages }) {\n  return messages.map(m => <p>{m}</p>)\n}' },
   { path: 'app/components/UploadFiles_Component.tsx', content: 'export default function UploadFiles() {\n  return <input type="file" />\n}' },
   { path: 'app/hooks/useChatState.ts', content: 'export function useChatState() {\n  return { messages: [], setMessages }\n}' },
-  { path: 'app/hooks/useChatManager.ts', content: 'export function useChatManager() {\n  return { send, status }\n}' },
-  { path: 'app/hooks/useStartAssistant.ts', content: 'export function useStartAssistant() {\n  return { start }\n}' },
+  { path: 'app/hooks/useChatManager.ts', content: 'import { ChatManager } from \'@/services/ChatManager\'\nexport function useChatManager() {\n  return { send, status }\n}' },
+  { path: 'app/hooks/useStartAssistant.ts', content: 'import { createAssistant } from \'@/modules/assistantModules\'\nexport function useStartAssistant() {\n  return { start: createAssistant }\n}' },
   { path: 'app/modules/assistantModules.ts', content: 'export async function createAssistant() {\n  return openai.beta.assistants.create({})\n}' },
   { path: 'app/modules/chatModules.ts', content: 'export async function addMessage(threadId, text) {\n  return openai.beta.threads.messages.create(threadId, { role: "user", content: text })\n}' },
-  { path: 'app/services/ChatManager.ts', content: 'export class ChatManager {\n  async send(text: string) {\n    return this.client.run(text)\n  }\n}' },
+  { path: 'app/services/ChatManager.ts', content: 'import { addMessage } from \'@/modules/chatModules\'\nexport class ChatManager {\n  async send(text: string) {\n    return addMessage(this.thread, text)\n  }\n}' },
   { path: 'app/services/api.js', content: 'export async function post(url, body) {\n  return fetch(url, { method: "POST", body: JSON.stringify(body) })\n}' },
-  { path: 'app/api/createAssistant/route.ts', content: 'export async function POST() {\n  return Response.json(await createAssistant())\n}' },
+  { path: 'app/api/createAssistant/route.ts', content: 'import { createAssistant } from \'@/modules/assistantModules\'\nexport async function POST() {\n  return Response.json(await createAssistant())\n}' },
   { path: 'app/api/createThread/route.ts', content: 'export async function POST() {\n  return Response.json(await openai.beta.threads.create())\n}' },
-  { path: 'app/api/addMessage/route.ts', content: 'export async function POST(req) {\n  const { threadId, content } = await req.json()\n  return Response.json(await addMessage(threadId, content))\n}' },
+  { path: 'app/api/addMessage/route.ts', content: 'import { addMessage } from \'@/modules/chatModules\'\nexport async function POST(req) {\n  const { threadId, content } = await req.json()\n  return Response.json(await addMessage(threadId, content))\n}' },
   { path: 'app/api/runAssistant/route.ts', content: 'export async function POST(req) {\n  return Response.json(await runAssistant(await req.json()))\n}' },
   { path: 'app/api/listMessages/route.ts', content: 'export async function POST(req) {\n  const { threadId } = await req.json()\n  return Response.json(await listMessages(threadId))\n}' },
   { path: 'app/api/upload/route.ts', content: 'export async function POST(req) {\n  return Response.json(await uploadFile(req))\n}' },

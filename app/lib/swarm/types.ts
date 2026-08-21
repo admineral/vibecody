@@ -1,4 +1,5 @@
 export type SwarmVersionId =
+  | 'board'
   | 'repo'
   | 'chip'
   | 'neon'
@@ -31,6 +32,10 @@ export interface BuildingDef {
   lines: number
   kind: 'page' | 'component' | 'hook' | 'util' | 'api' | 'config'
   code: string
+  path?: string
+  folder?: string
+  uses?: string[]
+  sandbox?: boolean
   hasBug?: boolean
   hidden?: boolean
 }
@@ -45,6 +50,12 @@ export interface BuildingState {
   kind: BuildingDef['kind']
   color: string
   code: string
+  path: string
+  folder: string
+  col: number
+  row: number
+  uses: string[]
+  sandbox: boolean
   hasBug: boolean
   beingWorked: boolean
   spawned: boolean

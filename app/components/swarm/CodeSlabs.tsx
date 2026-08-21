@@ -13,7 +13,7 @@ interface CodeSlabsProps {
 }
 
 export default function CodeSlabs({ slabs, buildings, theme, compact, selectedId }: CodeSlabsProps) {
-  if (theme.nodeMode) return null
+  if (theme.nodeMode || theme.cardMode) return null
 
   const visible = compact
     ? slabs.filter((s) => s.visible && s.buildingId === selectedId).slice(0, 1)

@@ -7,6 +7,9 @@ import { DISTRICTS } from '@/app/lib/swarm/cityData'
 import { buildingFootprint, themedBuildingPosition, themedDistrictY } from '@/app/lib/swarm/cityLayout'
 import CityFabric from './CityFabric'
 import SwarmCodeCard from './SwarmCodeCard'
+import ChessboardGround from './ChessboardGround'
+import FolderPlates from './FolderPlates'
+import ModuleLinks from './ModuleLinks'
 import { useFacadeLibrary, type Facade } from './cityTextures'
 
 interface CodeCityProps {
@@ -276,8 +279,15 @@ export default function CodeCity({ buildings, theme, selectedId, compact, hd, on
   return (
     <group>
       <CityFabric buildings={visible} theme={theme} facades={facades} />
+      {theme.cardMode && (
+        <>
+          <ChessboardGround theme={theme} />
+          <FolderPlates buildings={visible} theme={theme} />
+          <ModuleLinks buildings={visible} theme={theme} selectedId={selectedId} />
+        </>
+      )}
 
-      {!theme.nodeMode && !theme.chipMode && DISTRICTS.map((district) => {
+      {!theme.cardMode && !theme.nodeMode && !theme.chipMode && DISTRICTS.map((district) => {
         const y = themedDistrictY(district.id, theme)
         const plateColor = '#e2e8f0'
         return (

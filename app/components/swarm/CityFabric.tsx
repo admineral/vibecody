@@ -50,14 +50,14 @@ export default function CityFabric({ buildings, theme, facades }: CityFabricProp
 
   const daylight = true
   const neon = theme.id === 'neon' || theme.id === 'hive' || theme.id === 'repo'
-  const showGround = !theme.floatIslands && !theme.nodeMode && !theme.chipMode
+  const showGround = !theme.floatIslands && !theme.nodeMode && !theme.chipMode && !theme.cardMode
   const showSkyline = showGround && !theme.hivePull
 
   const spawnKey = buildings.filter((b) => b.spawned).map((b) => b.id).join(',')
   const fillers = useMemo(() => {
-    if (theme.nodeMode || theme.chipMode || theme.hivePull) return []
+    if (theme.nodeMode || theme.chipMode || theme.hivePull || theme.cardMode) return []
     return listFillerPlots(buildings.filter((b) => b.spawned))
-  }, [spawnKey, theme.chipMode, theme.nodeMode, theme.hivePull]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [spawnKey, theme.chipMode, theme.nodeMode, theme.hivePull, theme.cardMode]) // eslint-disable-line react-hooks/exhaustive-deps
   const skyline = useMemo(() => (showSkyline ? listSkylinePlots() : []), [showSkyline])
 
   const lamps = useMemo(() => {
@@ -160,7 +160,7 @@ export default function CityFabric({ buildings, theme, facades }: CityFabricProp
     mesh.instanceMatrix.needsUpdate = true
   }, [trees])
 
-  if (theme.nodeMode || theme.chipMode) return null
+  if (theme.nodeMode || theme.chipMode || theme.cardMode) return null
 
   const roadColor = daylight ? '#4b5563' : neon ? '#0b1224' : theme.road
   const metalness = neon ? 0.55 : 0.12

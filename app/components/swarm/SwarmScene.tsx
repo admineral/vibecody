@@ -60,7 +60,7 @@ function Environment({ theme, hd }: { theme: VersionTheme; hd?: boolean }) {
       {!theme.nodeMode && !theme.floatIslands && !theme.chipMode && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
           <planeGeometry args={[260, 260]} />
-          <meshStandardMaterial color={theme.ground} roughness={0.9} />
+          <meshStandardMaterial color={theme.cardMode ? '#cbd5e1' : theme.ground} roughness={0.9} />
         </mesh>
       )}
     </>
@@ -123,6 +123,7 @@ function SceneBody({
         groupRefs={groupRefs}
         portrait={portrait}
         chipMode={theme.chipMode}
+        cardMode={theme.cardMode}
         homePosition={homePosition}
         resetNonce={resetNonce}
       />
@@ -134,6 +135,7 @@ export default function SwarmScene(props: SwarmSceneProps) {
   const hd = props.hd !== false
   const cameraPosition = useMemo<[number, number, number]>(() => {
     if (props.theme.chipMode) return [0.4, 22, 12]
+    if (props.theme.cardMode) return props.portrait ? [8, 13, 14] : [12, 11, 16]
     if (props.portrait) {
       if (props.theme.nodeMode) return [0, 12, 14]
       if (props.theme.hivePull) return [5, 11, 8]

@@ -18,6 +18,17 @@ const ATLAS = {
 
 export const VERSIONS: VersionTheme[] = [
   {
+    id: 'board',
+    label: 'Code Board',
+    tagline: 'Chessboard tiles on the floor — inspect flips them up to read',
+    ...ATLAS,
+    floatIslands: false,
+    nodeMode: false,
+    hivePull: false,
+    chipMode: false,
+    cardMode: true,
+  },
+  {
     id: 'repo',
     label: 'Repo Replay',
     tagline: 'GitHub city in daylight: commits become swarm steps',

@@ -55,7 +55,8 @@ function Drone({
       if (theme.chipMode) {
         target.current.set(x, 0.52, z)
       } else if (theme.cardMode) {
-        target.current.set(x, y + (building.beingWorked ? 3.5 : 2.4), z)
+        const reading = building.beingWorked
+        target.current.set(x, y + (reading ? 1.45 : 1.05), z + (reading ? 1.15 : 0.35))
       } else {
         target.current.set(x, y + building.height * building.growth + 2.3, z)
       }
@@ -123,8 +124,8 @@ function Drone({
         </mesh>
       )}
       {runtime?.beam && !theme.chipMode && (
-        <mesh position={[0, -1.2, 0]}>
-          <cylinderGeometry args={[0.03, 0.18, 2.4, 8]} />
+        <mesh position={[0, theme.cardMode ? -0.7 : -1.2, theme.cardMode ? -0.2 : 0]} rotation={theme.cardMode ? [0.4, 0, 0] : [0, 0, 0]}>
+          <cylinderGeometry args={[0.03, 0.18, theme.cardMode ? 1.3 : 2.4, 8]} />
           <meshBasicMaterial color={def.color} transparent opacity={0.35} />
         </mesh>
       )}

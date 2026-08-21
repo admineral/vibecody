@@ -1,4 +1,5 @@
 import type { AgentDef, BuildingDef, DistrictDef } from './types'
+import { enrichBuildingMeta, knownModuleIndex } from './moduleGraph'
 
 export const DISTRICTS: DistrictDef[] = [
   { id: 'app', name: 'app/', origin: [-12, 0, -10], size: [10, 8], color: '#dbeafe', neon: '#0284c7' },
@@ -8,41 +9,529 @@ export const DISTRICTS: DistrictDef[] = [
   { id: 'root', name: 'root', origin: [-2, 0, 14], size: [8, 4], color: '#fef9c3', neon: '#a16207' },
 ]
 
-export const BUILDINGS: BuildingDef[] = [
-  { id: 'page', name: 'page.tsx', district: 'app', col: 0, row: 0, lines: 142, kind: 'page', code: 'export default function Home() {\n  return <UniverseView />\n}' },
-  { id: 'layout', name: 'layout.tsx', district: 'app', col: 1, row: 0, lines: 48, kind: 'page', code: 'export default function RootLayout({ children }) {\n  return <html>{children}</html>\n}' },
-  { id: 'universe', name: '3dcode/page.tsx', district: 'app', col: 2, row: 0, lines: 254, kind: 'page', code: 'export default function ThreeDCodePage() {\n  return <CodeUniverse3D />\n}' },
-  { id: 'filetree', name: '3dfiletree-v2', district: 'app', col: 0, row: 1, lines: 186, kind: 'page', code: 'export default function FileTreeV2Page() {\n  return <FileTreeV2Scene />\n}' },
-  { id: 'sandbox', name: '3dsandbox', district: 'app', col: 1, row: 1, lines: 110, kind: 'page', code: 'export default function SandboxPage() {\n  return <Sandbox3DScene />\n}' },
-  { id: 'swarm-page', name: 'swarm/page.tsx', district: 'app', col: 2, row: 1, lines: 40, kind: 'page', code: 'export default function SwarmPage() {\n  return <SwarmGame />\n}', hidden: true },
-  { id: 'dashboard', name: 'dashboard/page.tsx', district: 'app', col: 3, row: 1, lines: 88, kind: 'page', code: 'export default function Dashboard() {\n  return <MetricsGrid />\n}', hidden: true },
+const RAW_BUILDINGS: BuildingDef[] = [
+  {
+    id: 'page',
+    name: 'page.tsx',
+    district: 'app',
+    col: 0,
+    row: 0,
+    lines: 142,
+    kind: 'page',
+    path: 'app/page.tsx',
+    uses: ['universe-view', 'header'],
+    sandbox: true,
+    code: `import AppHeader from '@/components/AppHeader'
+import UniverseView from '@/components/UniverseView'
 
-  { id: 'filecard', name: 'FileCard3D.tsx', district: 'components', col: 0, row: 0, lines: 220, kind: 'component', code: 'export default function FileCard3D({ component }) {\n  return <RoundedBox />\n}' },
-  { id: 'agent', name: 'ModularAgent.tsx', district: 'components', col: 1, row: 0, lines: 280, kind: 'component', code: 'export default function ModularAgent() {\n  useFrame(() => fly())\n}' },
-  { id: 'universe-view', name: 'UniverseView.tsx', district: 'components', col: 2, row: 0, lines: 118, kind: 'component', code: 'export default function UniverseView() {\n  return <CodeUniverse3D />\n}' },
-  { id: 'labs', name: 'LabsMenu.tsx', district: 'components', col: 3, row: 0, lines: 46, kind: 'component', code: 'export default function LabsMenu() {\n  return <DropdownMenu />\n}' },
-  { id: 'header', name: 'AppHeader.tsx', district: 'components', col: 0, row: 1, lines: 135, kind: 'component', code: 'export default function AppHeader() {\n  return <header />\n}' },
-  { id: 'canvas', name: 'Canvas.tsx', district: 'components', col: 1, row: 1, lines: 90, kind: 'component', code: 'export default function Canvas() {\n  return <ReactFlow />\n}' },
-  { id: 'explorer', name: 'FileExplorer.tsx', district: 'components', col: 2, row: 1, lines: 160, kind: 'component', code: 'export default function FileExplorer() {\n  return <tree />\n}' },
-  { id: 'session-guard', name: 'SessionGuard.tsx', district: 'components', col: 3, row: 1, lines: 32, kind: 'component', code: 'export function SessionGuard({ children }) {\n  if (!session) redirect("/login")\n  return children\n}', hidden: true },
+export default function Home() {
+  return (
+    <main className="home">
+      <AppHeader />
+      <UniverseView />
+    </main>
+  )
+}`,
+  },
+  {
+    id: 'layout',
+    name: 'layout.tsx',
+    district: 'app',
+    col: 1,
+    row: 0,
+    lines: 48,
+    kind: 'page',
+    path: 'app/layout.tsx',
+    uses: ['header', 'session-guard'],
+    sandbox: true,
+    code: `import AppHeader from '@/components/AppHeader'
+import { SessionGuard } from '@/components/SessionGuard'
 
-  { id: 'ast', name: 'ast-analyzer.ts', district: 'lib', col: 0, row: 0, lines: 410, kind: 'util', code: 'export function analyzeFile(source: string) {\n  return parseComponents(source)\n}' },
-  { id: 'downloader', name: 'repo-downloader.ts', district: 'lib', col: 1, row: 0, lines: 180, kind: 'util', code: 'export async function downloadRepo(url: string) {\n  return extractTar(url)\n}' },
-  { id: 'graph-hook', name: 'useComponentGraph.ts', district: 'lib', col: 2, row: 0, lines: 95, kind: 'hook', code: 'export function useComponentGraph(components) {\n  return { nodes, edges }\n}' },
-  { id: 'analyze-hook', name: 'useAnalyzeRepo.ts', district: 'lib', col: 0, row: 1, lines: 140, kind: 'hook', code: 'export function useAnalyzeRepo() {\n  return { analyzeRepository }\n}' },
-  { id: 'types', name: 'types/index.ts', district: 'lib', col: 1, row: 1, lines: 98, kind: 'util', code: 'export interface ComponentMetadata {\n  name: string\n  file: string\n}' },
-  { id: 'cache', name: 'cache.ts', district: 'lib', col: 2, row: 1, lines: 70, kind: 'util', code: 'export function readCache(key: string) {\n  return localStorage.getItem(key)\n}', hasBug: true },
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <SessionGuard>
+          <AppHeader />
+          {children}
+        </SessionGuard>
+      </body>
+    </html>
+  )
+}`,
+  },
+  {
+    id: 'universe',
+    name: '3dcode/page.tsx',
+    district: 'app',
+    col: 2,
+    row: 0,
+    lines: 254,
+    kind: 'page',
+    path: 'app/3dcode/page.tsx',
+    uses: ['universe-view', 'graph-hook'],
+    sandbox: true,
+    code: `import UniverseView from '@/components/UniverseView'
+import { useComponentGraph } from '@/lib/useComponentGraph'
 
-  { id: 'analyze-api', name: 'analyze-repo', district: 'api', col: 0, row: 0, lines: 210, kind: 'api', code: 'export async function POST(req: Request) {\n  return analyze(await req.json())\n}' },
-  { id: 'auth-api', name: 'auth.ts', district: 'api', col: 1, row: 0, lines: 160, kind: 'api', code: 'export async function POST() {\n  return NextResponse.json({ ok: true })\n}', hasBug: true },
-  { id: 'file-api', name: 'file-content', district: 'api', col: 2, row: 0, lines: 80, kind: 'api', code: 'export async function GET(req: Request) {\n  return fileByPath(req)\n}' },
-  { id: 'cache-api', name: 'cache/route.ts', district: 'api', col: 0, row: 1, lines: 55, kind: 'api', code: 'export async function GET() {\n  return listCache()\n}' },
-  { id: 'users-api', name: 'users.ts', district: 'api', col: 1, row: 1, lines: 120, kind: 'api', code: 'export async function GET() {\n  return listUsers()\n}', hidden: true },
+export default function ThreeDCodePage() {
+  const graph = useComponentGraph()
+  return <UniverseView graph={graph} />
+}`,
+  },
+  {
+    id: 'filetree',
+    name: '3dfiletree-v2',
+    district: 'app',
+    col: 0,
+    row: 1,
+    lines: 186,
+    kind: 'page',
+    path: 'app/3dfiletree-v2/page.tsx',
+    uses: ['explorer', 'filecard'],
+    sandbox: true,
+    code: `import FileExplorer from '@/components/FileExplorer'
+import FileCard3D from '@/components/FileCard3D'
 
-  { id: 'pkg', name: 'package.json', district: 'root', col: 0, row: 0, lines: 63, kind: 'config', code: '{ "name": "docai", "dependencies": { "three": "^0.185" } }' },
-  { id: 'tsconfig', name: 'tsconfig.json', district: 'root', col: 1, row: 0, lines: 41, kind: 'config', code: '{ "compilerOptions": { "strict": true } }' },
-  { id: 'readme', name: 'README.md', district: 'root', col: 2, row: 0, lines: 62, kind: 'config', code: '# DocAI\nVisualize any GitHub repository in 3D.' },
+export default function FileTreeV2Page() {
+  return (
+    <FileExplorer>
+      <FileCard3D />
+    </FileExplorer>
+  )
+}`,
+  },
+  {
+    id: 'sandbox',
+    name: '3dsandbox',
+    district: 'app',
+    col: 1,
+    row: 1,
+    lines: 110,
+    kind: 'page',
+    path: 'app/3dsandbox/page.tsx',
+    uses: ['canvas', 'filecard'],
+    sandbox: true,
+    code: `import Canvas from '@/components/Canvas'
+import FileCard3D from '@/components/FileCard3D'
+
+export default function SandboxPage() {
+  return (
+    <Canvas>
+      <FileCard3D />
+    </Canvas>
+  )
+}`,
+  },
+  {
+    id: 'swarm-page',
+    name: 'swarm/page.tsx',
+    district: 'app',
+    col: 2,
+    row: 1,
+    lines: 40,
+    kind: 'page',
+    path: 'app/swarm/page.tsx',
+    uses: ['agent'],
+    sandbox: true,
+    hidden: true,
+    code: `import ModularAgent from '@/components/ModularAgent'
+
+export default function SwarmPage() {
+  return <ModularAgent />
+}`,
+  },
+  {
+    id: 'dashboard',
+    name: 'dashboard/page.tsx',
+    district: 'app',
+    col: 3,
+    row: 1,
+    lines: 88,
+    kind: 'page',
+    path: 'app/dashboard/page.tsx',
+    uses: ['labs', 'analyze-hook'],
+    sandbox: true,
+    hidden: true,
+    code: `import LabsMenu from '@/components/LabsMenu'
+import { useAnalyzeRepo } from '@/lib/useAnalyzeRepo'
+
+export default function Dashboard() {
+  const { metrics } = useAnalyzeRepo()
+  return <LabsMenu metrics={metrics} />
+}`,
+  },
+
+  {
+    id: 'filecard',
+    name: 'FileCard3D.tsx',
+    district: 'components',
+    col: 0,
+    row: 0,
+    lines: 220,
+    kind: 'component',
+    path: 'app/components/FileCard3D.tsx',
+    uses: ['types'],
+    code: `import type { ComponentMetadata } from '@/lib/types'
+
+export default function FileCard3D({ component }: { component: ComponentMetadata }) {
+  return <article className="card">{component.name}</article>
+}`,
+  },
+  {
+    id: 'agent',
+    name: 'ModularAgent.tsx',
+    district: 'components',
+    col: 1,
+    row: 0,
+    lines: 280,
+    kind: 'component',
+    path: 'app/components/ModularAgent.tsx',
+    uses: ['ast', 'graph-hook'],
+    code: `import { analyzeFile } from '@/lib/ast-analyzer'
+import { useComponentGraph } from '@/lib/useComponentGraph'
+
+export default function ModularAgent() {
+  const graph = useComponentGraph(analyzeFile)
+  return <drone graph={graph} />
+}`,
+  },
+  {
+    id: 'universe-view',
+    name: 'UniverseView.tsx',
+    district: 'components',
+    col: 2,
+    row: 0,
+    lines: 118,
+    kind: 'component',
+    path: 'app/components/UniverseView.tsx',
+    uses: ['graph-hook', 'canvas'],
+    code: `import Canvas from '@/components/Canvas'
+import { useComponentGraph } from '@/lib/useComponentGraph'
+
+export default function UniverseView() {
+  const { nodes } = useComponentGraph()
+  return <Canvas nodes={nodes} />
+}`,
+  },
+  {
+    id: 'labs',
+    name: 'LabsMenu.tsx',
+    district: 'components',
+    col: 3,
+    row: 0,
+    lines: 46,
+    kind: 'component',
+    path: 'app/components/LabsMenu.tsx',
+    uses: ['header'],
+    code: `import AppHeader from '@/components/AppHeader'
+
+export default function LabsMenu() {
+  return (
+    <nav>
+      <AppHeader />
+      <DropdownMenu />
+    </nav>
+  )
+}`,
+  },
+  {
+    id: 'header',
+    name: 'AppHeader.tsx',
+    district: 'components',
+    col: 0,
+    row: 1,
+    lines: 135,
+    kind: 'component',
+    path: 'app/components/AppHeader.tsx',
+    uses: ['session-guard'],
+    code: `import { SessionGuard } from '@/components/SessionGuard'
+
+export default function AppHeader() {
+  return (
+    <header>
+      <SessionGuard>
+        <Logo />
+      </SessionGuard>
+    </header>
+  )
+}`,
+  },
+  {
+    id: 'canvas',
+    name: 'Canvas.tsx',
+    district: 'components',
+    col: 1,
+    row: 1,
+    lines: 90,
+    kind: 'component',
+    path: 'app/components/Canvas.tsx',
+    uses: ['graph-hook'],
+    code: `import { useComponentGraph } from '@/lib/useComponentGraph'
+
+export default function Canvas() {
+  const graph = useComponentGraph()
+  return <ReactFlow nodes={graph.nodes} />
+}`,
+  },
+  {
+    id: 'explorer',
+    name: 'FileExplorer.tsx',
+    district: 'components',
+    col: 2,
+    row: 1,
+    lines: 160,
+    kind: 'component',
+    path: 'app/components/FileExplorer.tsx',
+    uses: ['filecard', 'types'],
+    code: `import FileCard3D from '@/components/FileCard3D'
+import type { ComponentMetadata } from '@/lib/types'
+
+export default function FileExplorer({ files }: { files: ComponentMetadata[] }) {
+  return files.map((file) => <FileCard3D key={file.name} component={file} />)
+}`,
+  },
+  {
+    id: 'session-guard',
+    name: 'SessionGuard.tsx',
+    district: 'components',
+    col: 3,
+    row: 1,
+    lines: 32,
+    kind: 'component',
+    path: 'app/components/SessionGuard.tsx',
+    uses: ['auth-api'],
+    hidden: true,
+    code: `export function SessionGuard({ children }) {
+  if (!session) redirect('/login')
+  return children
+}`,
+  },
+
+  {
+    id: 'ast',
+    name: 'ast-analyzer.ts',
+    district: 'lib',
+    col: 0,
+    row: 0,
+    lines: 410,
+    kind: 'util',
+    path: 'lib/ast-analyzer.ts',
+    uses: ['types'],
+    code: `import type { ComponentMetadata } from '@/lib/types'
+
+export function analyzeFile(source: string): ComponentMetadata {
+  return parseComponents(source)
+}`,
+  },
+  {
+    id: 'downloader',
+    name: 'repo-downloader.ts',
+    district: 'lib',
+    col: 1,
+    row: 0,
+    lines: 180,
+    kind: 'util',
+    path: 'lib/repo-downloader.ts',
+    uses: ['cache'],
+    code: `import { readCache } from '@/lib/cache'
+
+export async function downloadRepo(url: string) {
+  return readCache(url) ?? extractTar(url)
+}`,
+  },
+  {
+    id: 'graph-hook',
+    name: 'useComponentGraph.ts',
+    district: 'lib',
+    col: 2,
+    row: 0,
+    lines: 95,
+    kind: 'hook',
+    path: 'lib/useComponentGraph.ts',
+    uses: ['types', 'ast'],
+    code: `import { analyzeFile } from '@/lib/ast-analyzer'
+import type { ComponentMetadata } from '@/lib/types'
+
+export function useComponentGraph(components: ComponentMetadata[]) {
+  return { nodes: analyzeFile, edges: [] }
+}`,
+  },
+  {
+    id: 'analyze-hook',
+    name: 'useAnalyzeRepo.ts',
+    district: 'lib',
+    col: 0,
+    row: 1,
+    lines: 140,
+    kind: 'hook',
+    path: 'lib/useAnalyzeRepo.ts',
+    uses: ['ast', 'downloader'],
+    code: `import { analyzeFile } from '@/lib/ast-analyzer'
+import { downloadRepo } from '@/lib/repo-downloader'
+
+export function useAnalyzeRepo() {
+  return { analyzeRepository: async (url) => analyzeFile(await downloadRepo(url)) }
+}`,
+  },
+  {
+    id: 'types',
+    name: 'types/index.ts',
+    district: 'lib',
+    col: 1,
+    row: 1,
+    lines: 98,
+    kind: 'util',
+    path: 'lib/types/index.ts',
+    uses: [],
+    code: `export interface ComponentMetadata {
+  name: string
+  file: string
+  kind: 'page' | 'component' | 'hook'
+}`,
+  },
+  {
+    id: 'cache',
+    name: 'cache.ts',
+    district: 'lib',
+    col: 2,
+    row: 1,
+    lines: 70,
+    kind: 'util',
+    path: 'lib/cache.ts',
+    uses: [],
+    hasBug: true,
+    code: `export function readCache(key: string) {
+  return localStorage.getItem(key)
+}`,
+  },
+
+  {
+    id: 'analyze-api',
+    name: 'analyze-repo',
+    district: 'api',
+    col: 0,
+    row: 0,
+    lines: 210,
+    kind: 'api',
+    path: 'app/api/analyze-repo/route.ts',
+    uses: ['analyze-hook'],
+    code: `import { useAnalyzeRepo } from '@/lib/useAnalyzeRepo'
+
+export async function POST(req: Request) {
+  const { url } = await req.json()
+  return analyze(url)
+}`,
+  },
+  {
+    id: 'auth-api',
+    name: 'auth.ts',
+    district: 'api',
+    col: 1,
+    row: 0,
+    lines: 160,
+    kind: 'api',
+    path: 'app/api/auth/route.ts',
+    uses: ['cache'],
+    hasBug: true,
+    code: `import { readCache } from '@/lib/cache'
+
+export async function POST() {
+  return NextResponse.json({ ok: true, session: readCache('auth') })
+}`,
+  },
+  {
+    id: 'file-api',
+    name: 'file-content',
+    district: 'api',
+    col: 2,
+    row: 0,
+    lines: 80,
+    kind: 'api',
+    path: 'app/api/file-content/route.ts',
+    uses: ['downloader'],
+    code: `import { downloadRepo } from '@/lib/repo-downloader'
+
+export async function GET(req: Request) {
+  return fileByPath(req)
+}`,
+  },
+  {
+    id: 'cache-api',
+    name: 'cache/route.ts',
+    district: 'api',
+    col: 0,
+    row: 1,
+    lines: 55,
+    kind: 'api',
+    path: 'app/api/cache/route.ts',
+    uses: ['cache'],
+    code: `import { readCache } from '@/lib/cache'
+
+export async function GET() {
+  return listCache()
+}`,
+  },
+  {
+    id: 'users-api',
+    name: 'users.ts',
+    district: 'api',
+    col: 1,
+    row: 1,
+    lines: 120,
+    kind: 'api',
+    path: 'app/api/users/route.ts',
+    uses: ['auth-api'],
+    hidden: true,
+    code: `export async function GET() {
+  return listUsers()
+}`,
+  },
+
+  {
+    id: 'pkg',
+    name: 'package.json',
+    district: 'root',
+    col: 0,
+    row: 0,
+    lines: 63,
+    kind: 'config',
+    path: 'package.json',
+    uses: [],
+    code: '{ "name": "docai", "dependencies": { "three": "^0.185" } }',
+  },
+  {
+    id: 'tsconfig',
+    name: 'tsconfig.json',
+    district: 'root',
+    col: 1,
+    row: 0,
+    lines: 41,
+    kind: 'config',
+    path: 'tsconfig.json',
+    uses: [],
+    code: '{ "compilerOptions": { "strict": true } }',
+  },
+  {
+    id: 'readme',
+    name: 'README.md',
+    district: 'root',
+    col: 2,
+    row: 0,
+    lines: 62,
+    kind: 'config',
+    path: 'README.md',
+    uses: [],
+    code: '# DocAI\nVisualize any GitHub repository in 3D.',
+  },
 ]
+
+const known = knownModuleIndex(RAW_BUILDINGS)
+
+export const BUILDINGS: BuildingDef[] = RAW_BUILDINGS.map((building) => ({
+  ...building,
+  ...enrichBuildingMeta(building, known),
+}))
 
 export const AGENTS: AgentDef[] = [
   {
@@ -109,8 +598,8 @@ export function buildingWorldPosition(building: BuildingDef): [number, number, n
   const district = DISTRICTS.find((d) => d.id === building.district)
   if (!district) return [0, 0, 0]
   const [w, d] = district.size
-  const x = district.origin[0] - w / 2 + 1.4 + building.col * 2.2
-  const z = district.origin[2] - d / 2 + 1.4 + building.row * 2.2
+  const x = district.origin[0] - w / 2 + 1.35 + building.col * 1.9
+  const z = district.origin[2] - d / 2 + 1.35 + building.row * 1.9
   return [x, 0, z]
 }
 

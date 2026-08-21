@@ -238,7 +238,7 @@ export default function MobileHUD({
       <div className="absolute inset-x-0 bottom-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pr-16">
         {hint && (
           <p className="pointer-events-none mb-2 max-w-[78%] rounded-full bg-black/55 px-3 py-1.5 text-[11px] text-white backdrop-blur-md">
-            Drag to look around · pinch to zoom
+            Drag to look · tap a tile to flip it up · tap again to expand
           </p>
         )}
         <div className="pointer-events-auto max-w-[78%]" onPointerDown={trapPointer}>
